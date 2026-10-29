@@ -212,7 +212,7 @@ function TaskRow({ t, start, off, onToggle }: { t: PlanTask; start: string; off:
         <span className="rowi__meta">
           <span className="tn-tag tn-tag--trade">{t.trade}</span>
           <span className={`tn-zone tn-zone--${t.zone}`}>{t.zone === "critical" ? "Critical" : "General"}</span>
-          <span className="tn-data">{fmtShort(s)} – {fmtShort(e)}</span>
+          <span className="tn-data">{s === e ? fmtShort(s) : `${fmtShort(s)} – ${fmtShort(e)}`}</span>
           <Suggest source={t.source} why={t.why} />
         </span>
       </span>

@@ -77,7 +77,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
           <span className="tn-stamp">{project.code} · {project.city}{project.status !== "active" ? ` · ${project.status}` : ""}</span>
           <h1 className="tn-display">{project.name}</h1>
           <p className="tn-muted">
-            Supervisor {sup?.name ?? "not set"} · Doctor {doc?.name ?? "not set"} · Started {fmtDate(project.start_date)}
+            Supervisor {sup?.name ?? "not set"} · Doctor {doc?.name ?? "not set"} · {project.start_date > t0 ? "Starts" : "Started"} {fmtDate(project.start_date)}
           </p>
         </div>
         <div style={{ minWidth: 280, flex: "0 1 420px" }}>
@@ -274,7 +274,7 @@ function TasksTab({ project, tasks, here }: { project: Project; tasks: Task[]; h
                       <span className="rowi__meta">
                         <TradeTag trade={t.trade} />
                         <ZoneTag zone={t.zone} />
-                        <span className="tn-data">{fmtShort(t.planned_start)} – {fmtShort(t.planned_end)}</span>
+                        <span className="tn-data">{t.planned_start === t.planned_end ? fmtShort(t.planned_start) : `${fmtShort(t.planned_start)} – ${fmtShort(t.planned_end)}`}</span>
                         <SourceTag source={t.source} />
                       </span>
                     </div>

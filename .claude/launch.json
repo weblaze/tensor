@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "tensor-dev",
+      "runtimeExecutable": "C:/dev/tools/node/node-versions/v24.22.0/installation/npm.cmd",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000
+    }
+  ]
+}

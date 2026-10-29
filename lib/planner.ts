@@ -193,9 +193,9 @@ export async function createProject(input: CreateProjectInput): Promise<{ id: st
   if (taskRows.length) must(await sb.from("tasks").insert(taskRows), "create tasks");
   if (materialRows.length) must(await sb.from("materials").insert(materialRows), "create materials");
 
-  // The supervisor's updates now go to this site unless they choose otherwise.
+  // A supervisor with no site yet reports for this one; one already on a site keeps it and can switch with /site.
   if (input.supervisorId && input.startDate <= addDays(t0, 7)) {
-    await sb.from("people").update({ current_project_id: project.id }).eq("id", input.supervisorId);
+    await sb.from("people").update({ current_project_id: project.id }).eq("id", input.supervisorId).is("current_project_id", null);
   }
   return project;
 }
