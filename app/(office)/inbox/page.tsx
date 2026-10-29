@@ -96,7 +96,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
           <h1 className="tn-title">{items.length ? `${plural(items.length, "update")} to review` : "Inbox clear"}</h1>
           <p className="tn-muted">Check where each site update goes. One click sends it.</p>
         </div>
-        {items.length ? <span className="tn-caption">Keys: <span className="kbd">A</span> approve top · <span className="kbd">H</span> hold top</span> : null}
+        {items.length ? <span className="tn-caption hide-sm">Keys: <span className="kbd">A</span> approve top · <span className="kbd">H</span> hold top</span> : null}
       </div>
 
       <div className="split">
