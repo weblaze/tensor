@@ -3,7 +3,7 @@ import { db, MEDIA_BUCKET, must } from "./db";
 import { today } from "./dates";
 import { channel, type Button } from "./messaging";
 import { classify, transcribe, type ClassifyInput, type Example } from "./ai";
-import { maybeAutopilot } from "./routing";
+import { maybeAutopilot, setMaterialStatus } from "./routing";
 import type { Decision, Person, Project, RouteTarget, Update, UpdateKind } from "./types";
 
 // Minimal Telegram update shapes (only what we read).
@@ -276,6 +276,16 @@ async function handleCallback(cb: TgCallback) {
     const sorted = await sortUpdate(filed);
     const all = await candidateProjects(person);
     return confirm(chatId, sorted, project, all.length > 1);
+  }
+
+  if (data.startsWith("ord:")) {
+    const id = data.slice(4);
+    if (!["procurement", "coordinator", "head"].includes(person.role)) return ch.answerCallback(cb.id, "Only the office can mark orders");
+    const { data: m } = await sb.from("materials").select("id, item, status").eq("id", id).maybeSingle();
+    if (!m) return ch.answerCallback(cb.id, "Item not found");
+    if (m.status === "to_order" || m.status === "issue") await setMaterialStatus(id, "ordered");
+    await ch.answerCallback(cb.id, `${m.item} marked ordered`);
+    return reply(chatId, `${m.item} marked ordered. Thank you.`);
   }
 
   if (data.startsWith("dec:")) {
