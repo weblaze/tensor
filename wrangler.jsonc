@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tensor",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": { "enabled": true },
+  // Non-secret config. Secrets (SUPABASE_SECRET_KEY, TELEGRAM_*, GEMINI_API_KEY, OFFICE_PIN,
+  // CRON_SECRET, SESSION_SECRET) are set with `npx wrangler secret put NAME`.
+  "vars": {
+    "SUPABASE_URL": "https://gwgthatwoxuggidblodi.supabase.co",
+    "GEMINI_MODEL": "gemini-2.5-flash"
+  }
+}
