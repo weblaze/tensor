@@ -5,10 +5,9 @@ import { db } from "@/lib/db";
 import { notifyRole } from "@/lib/notify";
 
 // Doctor answers a decision from the public report. The report token proves which project they can answer for.
-export async function answerDecisionAction(form: FormData) {
+export async function answerDecisionAction(answer: "approved" | "change", form: FormData) {
   const token = String(form.get("token") ?? "");
   const id = String(form.get("id") ?? "");
-  const answer = String(form.get("answer") ?? "");
   const note = String(form.get("note") ?? "").trim().slice(0, 500) || null;
   const date = String(form.get("date") ?? "");
   if (!["approved", "change"].includes(answer)) return;

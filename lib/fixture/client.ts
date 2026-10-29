@@ -101,10 +101,11 @@ class Query implements PromiseLike<Result> {
   is(c: string, v: null) { this.filters.push((r) => (r[c] ?? null) === v); return this; }
   not(c: string, op: string, v: unknown) { this.filters.push((r) => (op === "is" ? (r[c] ?? null) !== v : r[c] !== v)); return this; }
   contains(c: string, vs: unknown[]) { this.filters.push((r) => Array.isArray(r[c]) && vs.every((v) => (r[c] as unknown[]).includes(v))); return this; }
-  gte(c: string, v: unknown) { this.filters.push((r) => cmp(r[c], v) >= 0); return this; }
-  gt(c: string, v: unknown) { this.filters.push((r) => cmp(r[c], v) > 0); return this; }
-  lte(c: string, v: unknown) { this.filters.push((r) => cmp(r[c], v) <= 0); return this; }
-  lt(c: string, v: unknown) { this.filters.push((r) => cmp(r[c], v) < 0); return this; }
+  // Like SQL, a comparison with NULL never matches.
+  gte(c: string, v: unknown) { this.filters.push((r) => r[c] != null && cmp(r[c], v) >= 0); return this; }
+  gt(c: string, v: unknown) { this.filters.push((r) => r[c] != null && cmp(r[c], v) > 0); return this; }
+  lte(c: string, v: unknown) { this.filters.push((r) => r[c] != null && cmp(r[c], v) <= 0); return this; }
+  lt(c: string, v: unknown) { this.filters.push((r) => r[c] != null && cmp(r[c], v) < 0); return this; }
   ilike(c: string, v: string) { const re = new RegExp(`^${v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/%/g, ".*")}$`, "i"); this.filters.push((r) => re.test(String(r[c] ?? ""))); return this; }
   order(c: string, o?: { ascending?: boolean }) { this.orders.push([c, o?.ascending !== false]); return this; }
   limit(n: number) { this.max = n; return this; }

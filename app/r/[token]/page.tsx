@@ -77,7 +77,7 @@ export default async function ReportPage({ params, searchParams }: {
             <h2 id="dec-h" className="tn-heading">{plural(open.length, "question")} from the team</h2>
           </div>
           {open.map((d) => (
-            <form key={d.id} action={answerDecisionAction} className="stack-4" style={{ borderTop: "1px solid var(--line)", paddingTop: 16 }}>
+            <form key={d.id} action={answerDecisionAction.bind(null, "approved")} className="stack-4" style={{ borderTop: "1px solid var(--line)", paddingTop: 16 }}>
               <input type="hidden" name="token" value={token} />
               <input type="hidden" name="id" value={d.id} />
               <input type="hidden" name="date" value={date ?? ""} />
@@ -88,8 +88,8 @@ export default async function ReportPage({ params, searchParams }: {
                 <input className="tn-input" name="note" placeholder="Anything you want changed" maxLength={500} />
               </label>
               <div className="decision__buttons">
-                <button className="tn-btn tn-btn--primary" name="answer" value="approved"><Icon name="check" />Approve</button>
-                <button className="tn-btn" name="answer" value="change"><Icon name="refresh" />Request change</button>
+                <button className="tn-btn tn-btn--primary"><Icon name="check" />Approve</button>
+                <button className="tn-btn" formAction={answerDecisionAction.bind(null, "change")}><Icon name="refresh" />Request change</button>
               </div>
             </form>
           ))}
@@ -159,7 +159,7 @@ export default async function ReportPage({ params, searchParams }: {
           <h2 className="tn-heading">Your recent decisions</h2>
           {answeredList.map((d) => (
             <p key={d.id} className="tn-muted">
-              {d.answer === "approved" ? "Approved" : "Change requested"}: {d.question}
+              {d.question} · {d.answer === "approved" ? "you approved" : "you asked for a change"}{d.answered_at ? ` on ${fmtShort(istDate(d.answered_at))}` : ""}
             </p>
           ))}
         </section>
