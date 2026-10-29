@@ -10,3 +10,6 @@ out/
 .DS_Store
 next-env.d.ts
 *.tsbuildinfo
+
+# Cloudflare local secrets for `npm run preview`
+.dev.vars*
