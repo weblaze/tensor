@@ -42,7 +42,12 @@ export async function runDailyChecks(opts: { force?: boolean } = {}): Promise<Cr
   for (const [pid, items] of dueByProject) {
     const p = byId.get(pid)!;
     const lines = items.map((m) => `• ${m.item}${m.qty ? ` (${m.qty} ${m.unit ?? ""})`.replace(" )", ")") : ""} · order ${fmtDue(m.order_by, t0)} (${fmtShort(m.order_by)})`);
-    await notifyRole("procurement", "procurement_alert", [`Order now · ${p.code} ${p.name}, ${p.city}`, ...lines, "Reply in Tensor when ordered. Not ordered in 24 hours goes to Prashant."].join("\n"), { projectId: pid });
+    await notifyRole(
+      "procurement",
+      "procurement_alert",
+      [`Order now · ${p.code} ${p.name}, ${p.city}`, ...lines, "Tap Ordered when done. Not ordered in 24 hours goes to Prashant."].join("\n"),
+      { projectId: pid, buttons: items.slice(0, 8).map((m) => [{ text: `Ordered: ${m.item}`.slice(0, 60), data: `ord:${m.id}` }]) },
+    );
     await sb.from("materials").update({ alert_sent_at: new Date().toISOString() }).in("id", items.map((m) => m.id));
     summary.alerts += items.length;
   }
