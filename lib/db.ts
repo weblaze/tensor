@@ -1,15 +1,22 @@
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { fixtureClient } from "./fixture/client";
 
 // Server-only Supabase client with the secret key. RLS has no policies, so only this key can read or write.
 let client: SupabaseClient | null = null;
 
+/** Dev only: TENSOR_FIXTURE=1 runs on in-memory demo data, no Supabase needed. */
+export function isFixture(): boolean {
+  return process.env.TENSOR_FIXTURE === "1" && process.env.NODE_ENV !== "production";
+}
+
 export function hasDb(): boolean {
-  return !!process.env.SUPABASE_URL && !!process.env.SUPABASE_SECRET_KEY;
+  return isFixture() || (!!process.env.SUPABASE_URL && !!process.env.SUPABASE_SECRET_KEY);
 }
 
 export function db(): SupabaseClient {
   if (client) return client;
+  if (isFixture()) return (client = fixtureClient() as unknown as SupabaseClient);
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SECRET_KEY;
   if (!url || !key) {

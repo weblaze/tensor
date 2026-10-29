@@ -34,7 +34,7 @@ const ROUTE_HELP: Record<RouteTarget, string> = {
   head: "Telegram now",
 };
 
-export function ReviewCard({ item, index }: { item: ReviewItem; index: number }) {
+export function ReviewCard({ item, index, onDone }: { item: ReviewItem; index: number; onDone?: (message: string) => void }) {
   const [result, setResult] = useState<ReviewResult | null>(null);
   const [pending, start] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
@@ -42,7 +42,11 @@ export function ReviewCard({ item, index }: { item: ReviewItem; index: number })
   function run(fn: (f: FormData) => Promise<ReviewResult>) {
     if (!formRef.current) return;
     const fd = new FormData(formRef.current);
-    start(async () => setResult(await fn(fd)));
+    start(async () => {
+      const res = await fn(fd);
+      setResult(res);
+      if (res.ok) onDone?.(res.message);
+    });
   }
 
   if (result?.ok) {

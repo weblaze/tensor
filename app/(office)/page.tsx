@@ -48,8 +48,8 @@ function ExceptionAction({ e }: { e: Exception }) {
   }
   return (
     <div className="tn-exc__action">
-      <Link className="tn-btn tn-btn--quiet" href={`/projects/${e.projectId}${e.kind === "decision" ? "" : "?tab=tasks"}`}>
-        Open site
+      <Link className="tn-btn tn-btn--quiet" href={`/projects/${e.projectId}?tab=${e.kind === "decision" ? "report" : "tasks"}`}>
+        {e.kind === "decision" ? "Open report" : "Open tasks"}
       </Link>
     </div>
   );

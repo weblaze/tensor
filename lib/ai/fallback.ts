@@ -42,6 +42,33 @@ function overlap(text: string, label: string): number {
   return l.filter((w) => t.has(w)).length / l.length;
 }
 
+// Common site Hinglish → English, so keyword mode still writes an English note.
+const HINGLISH: [RegExp, string][] = [
+  [/\bnahi aaye\b/gi, "absent"],
+  [/\bsite pe\b|\bsite par\b/gi, "on site"],
+  [/\bnahi aaya\b/gi, "not arrived"],
+  [/\bnahi mila\b/gi, "not received"],
+  [/\bho gaya\b|\bho gaye\b|\bpura ho gaya\b/gi, "done"],
+  [/\baa gaya\b|\baa gaye\b|\bpahunch gaya\b/gi, "received"],
+  [/\bshuru\b/gi, "started"],
+  [/\bkam hai\b/gi, "short"],
+  [/\btoot gaye\b|\btoot gaya\b|\btoote\b|\btoota\b/gi, "broken"],
+  [/\bkharab\b/gi, "damaged"],
+  [/\baadmi\b/gi, "men"],
+  [/\bmazdoor\b/gi, "labour"],
+  [/\baaj\b/gi, "today"],
+  [/\bkal\b/gi, "tomorrow"],
+  [/\bmein\b/gi, "in"],
+  [/\baur\b/gi, "and"],
+  [/\bka kaam\b|\bki kaam\b/gi, "work"],
+];
+
+export function toEnglishish(raw: string): string {
+  let s = raw;
+  for (const [re, en] of HINGLISH) s = s.replace(re, en);
+  return s;
+}
+
 export function cleanNote(raw: string): string {
   let s = raw.replace(/\s+/g, " ").trim().replace(/[.!]+$/, "");
   if (!s) return "";
@@ -91,7 +118,7 @@ export function classifyFallback(input: ClassifyInput): Classification {
     if (score > 0 && (!task || score > task.score)) task = { ...k, score };
   }
 
-  const trade = guessTrade(t) ?? (mat && mat.score >= 0.5 ? mat.trade : null) ?? task?.trade ?? null;
+  const trade = guessTrade(t) ?? (mat && mat.score >= 0.5 ? mat.trade : null) ?? task?.trade ?? (PHASE.test(t) ? "Coordination" : null);
   const zone = guessZone(t, trade);
 
   let action: SuggestedAction | null = null;
@@ -105,9 +132,9 @@ export function classifyFallback(input: ClassifyInput): Classification {
       type: "material_status",
       material_id: mat.id,
       status: isIssue ? "issue" : "received",
-      ...(isIssue ? { note: cleanNote(text).slice(0, 80) } : {}),
+      ...(isIssue ? { note: cleanNote(toEnglishish(text)).slice(0, 80) } : {}),
     };
-  } else if (task && task.score >= 0.5 && (done || started || isIssue)) {
+  } else if (task && task.score >= 0.6 && (done || started || isIssue)) {
     action = { type: "task_status", task_id: task.id, status: isIssue ? "blocked" : done ? "done" : "doing" };
   }
 
@@ -135,7 +162,7 @@ export function classifyFallback(input: ClassifyInput): Classification {
   }
 
   return {
-    note: cleanNote(text),
+    note: cleanNote(toEnglishish(text)),
     trade,
     zone,
     is_issue: isIssue,

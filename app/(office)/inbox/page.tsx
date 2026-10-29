@@ -3,9 +3,10 @@ import { db, signedUrls } from "@/lib/db";
 import { fmtShort, fmtTime, fmtWhen, istDate, plural } from "@/lib/dates";
 import { autopilotMeter, getAutopilot } from "@/lib/routing";
 import type { Person, Project, SuggestedAction, Update } from "@/lib/types";
-import { Clear, Flash } from "@/components/ui";
+import { Flash } from "@/components/ui";
 import { Icon } from "@/components/Icon";
-import { ReviewCard, type ReviewItem } from "./ReviewCard";
+import type { ReviewItem } from "./ReviewCard";
+import { InboxList } from "./InboxList";
 import { Shortcuts } from "./Shortcuts";
 import { autopilotAction, reopenUpdateAction } from "../actions";
 
@@ -100,11 +101,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
 
       <div className="split">
         <div className="stack-4">
-          {items.length === 0 ? (
-            <div className="tn-list"><Clear>Nothing waiting. New site updates will appear here.</Clear></div>
-          ) : (
-            items.map((it, i) => <ReviewCard key={it.id} item={it} index={i} />)
-          )}
+          <InboxList items={items} />
 
           {reviewed.length ? (
             <section className="section">
