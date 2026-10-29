@@ -64,7 +64,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
                         <span className="rowi__meta">
                           {p.telegram_chat_id ? <StatusTag>Linked</StatusTag> : <StatusTag tone="attention" icon="phone">Not linked</StatusTag>}
                           <span>Code <span className="tn-data">{p.link_code}</span></span>
-                          {p.phone ? <span>· <a href={`tel:${p.phone.replace(/\s/g, "")}`}>{p.phone}</a></span> : null}
+                          {p.phone ? <span className="tn-data">· {p.phone}</span> : null}
                           {cur ? <span>· reporting for {cur.city}</span> : null}
                         </span>
                         {!p.telegram_chat_id && link ? <div style={{ marginTop: 8, maxWidth: 420 }}><CopyLink value={link} label={`Telegram link for ${p.name}`} /></div> : null}
@@ -78,6 +78,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
                         ) : (
                           <form action={newLinkCodeAction}><input type="hidden" name="id" value={p.id} /><button className="tn-btn tn-btn--quiet">New code</button></form>
                         )}
+                        {p.phone ? <a className="tn-btn tn-btn--quiet" href={`tel:${p.phone.replace(/\s/g, "")}`}><Icon name="phone" />Call</a> : null}
                         <a className="tn-btn tn-btn--quiet" href={`/people?edit=${p.id}`}>Edit</a>
                       </div>
                     </div>

@@ -6,6 +6,7 @@ import { fmtDate, fmtShort, fmtTime, istDate, plural } from "@/lib/dates";
 import { getReport } from "@/lib/report";
 import { DayCounter, Mark, Photo, StatusTag, TradeTag, ZoneTag, stampFor } from "@/components/ui";
 import { Icon } from "@/components/Icon";
+import { PrintButton } from "@/components/PrintButton";
 import { answerDecisionAction } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -46,7 +47,10 @@ export default async function ReportPage({ params, searchParams }: {
           <Mark size={20} />
           <span>Tensor</span>
         </span>
-        <span className="tn-caption">Design Matrix · {r.project.code}</span>
+        <span className="tn-row">
+          <span className="tn-caption">Design Matrix · {r.project.code}</span>
+          <PrintButton />
+        </span>
       </div>
 
       {answered ? (

@@ -119,7 +119,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
                 <div className="tn-exc__main">
                   <p className="tn-exc__what">{e.what}</p>
                   <p className="tn-exc__meta">
-                    <Link href={`/projects/${e.projectId}`} style={{ color: "inherit" }}>{e.site}</Link>
+                    {e.site}
                     {e.person ? ` · ${e.person}` : ""} · <span className="tn-data">{e.projectCode}</span>
                     {e.escalated ? " · escalated to Prashant" : ""}
                   </p>
