@@ -1,0 +1,66 @@
+/* Tensor tokens, from docs/design-system/tokens.json. Light is the default theme. */
+:root {
+  --surface: #f6f7f6;
+  --surface-raised: #ffffff;
+  --surface-sunken: #eceeed;
+  --line: #d9dedc;
+  --line-strong: #86918e;
+  --ink: #111816;
+  --ink-muted: #56625e;
+  --scrub: #0e6b5c;
+  --scrub-soft: #dcefe9;
+  --on-scrub: #ffffff;
+  --signal: #9c4f00;
+  --signal-soft: #fbecd6;
+  --alert: #b8321c;
+  --alert-soft: #fbe3dd;
+  --on-alert: #ffffff;
+  --stone: #6e5f4b;
+  --stone-soft: #efe9e0;
+  --focus: var(--scrub);
+  --shadow-sheet: 0 8px 24px rgba(17, 24, 22, 0.12);
+
+  --font-sans: var(--font-plex-sans), var(--font-plex-deva), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+
+  --tap-min: 48px;
+  --row: 56px;
+  --bar: 64px;
+
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --surface: #0f1312;
+  --surface-raised: #171c1b;
+  --surface-sunken: #0a0d0c;
+  --line: #2a3230;
+  --line-strong: #66726f;
+  --ink: #e8eeec;
+  --ink-muted: #9aa7a3;
+  --scrub: #3fc3a8;
+  --scrub-soft: #11302a;
+  --on-scrub: #04211b;
+  --signal: #f0a43c;
+  --signal-soft: #36230a;
+  --alert: #ff7f63;
+  --alert-soft: #3b1811;
+  --on-alert: #1f0805;
+  --stone: #c7b79f;
+  --stone-soft: #2a251e;
+  --shadow-sheet: 0 8px 24px rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
