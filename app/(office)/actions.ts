@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { requireOffice } from "@/lib/auth";
 import { db, must } from "@/lib/db";
 import { fmtShort } from "@/lib/dates";
 import { notifyPerson, notifyRole } from "@/lib/notify";
@@ -33,6 +34,7 @@ function refreshAll() {
 export interface ReviewResult { ok: boolean; message: string }
 
 export async function approveUpdateAction(form: FormData): Promise<ReviewResult> {
+  await requireOffice();
   const id = str(form, "id");
   const routes = form.getAll("routes").map(String).filter((r): r is RouteTarget => (ROUTES as string[]).includes(r));
   try {
@@ -57,6 +59,7 @@ export async function approveUpdateAction(form: FormData): Promise<ReviewResult>
 }
 
 export async function holdUpdateAction(form: FormData): Promise<ReviewResult> {
+  await requireOffice();
   try {
     await holdUpdate(str(form, "id"));
     refreshAll();
@@ -67,12 +70,14 @@ export async function holdUpdateAction(form: FormData): Promise<ReviewResult> {
 }
 
 export async function reopenUpdateAction(form: FormData) {
+  await requireOffice();
   await reopenUpdate(str(form, "id"));
   refreshAll();
   redirect(withMsg(back(form, "/inbox"), "Moved back to the inbox"));
 }
 
 export async function fileUpdateAction(form: FormData): Promise<ReviewResult> {
+  await requireOffice();
   const id = str(form, "id");
   const projectId = str(form, "project_id");
   if (!projectId) return { ok: false, message: "Choose a site first" };
@@ -89,6 +94,7 @@ export async function fileUpdateAction(form: FormData): Promise<ReviewResult> {
 // ---------- Materials and tasks ----------
 
 export async function materialStatusAction(form: FormData) {
+  await requireOffice();
   const status = str(form, "status") as MaterialStatus;
   if (!["to_order", "ordered", "received", "issue"].includes(status)) throw new Error("Bad status");
   const note = form.has("note") ? str(form, "note") || null : undefined;
@@ -106,6 +112,7 @@ export async function materialStatusAction(form: FormData) {
 }
 
 export async function taskStatusAction(form: FormData) {
+  await requireOffice();
   const status = str(form, "status") as TaskStatus;
   if (!["todo", "doing", "done", "blocked"].includes(status)) throw new Error("Bad status");
   await setTaskStatus(str(form, "id"), status);
@@ -114,6 +121,7 @@ export async function taskStatusAction(form: FormData) {
 }
 
 export async function escalateAction(form: FormData) {
+  await requireOffice();
   const id = str(form, "id");
   const { data } = await db().from("materials").select("*, projects(*)").eq("id", id).single();
   const m = data as { item: string; order_by: string; projects: Project };
@@ -124,6 +132,7 @@ export async function escalateAction(form: FormData) {
 }
 
 export async function remindSupervisorAction(form: FormData) {
+  await requireOffice();
   const projectId = str(form, "project_id");
   const { data } = await db().from("projects").select("*").eq("id", projectId).single();
   const p = data as Project;
@@ -136,6 +145,7 @@ export async function remindSupervisorAction(form: FormData) {
 }
 
 export async function addTaskAction(form: FormData) {
+  await requireOffice();
   const projectId = str(form, "project_id");
   const title = str(form, "title");
   if (!title) redirect(withMsg(back(form, `/projects/${projectId}`), "Add a title"));
@@ -157,6 +167,7 @@ export async function addTaskAction(form: FormData) {
 }
 
 export async function addMaterialAction(form: FormData) {
+  await requireOffice();
   const projectId = str(form, "project_id");
   const item = str(form, "item");
   if (!item) redirect(withMsg(back(form, `/projects/${projectId}?tab=materials`), "Add an item name"));
@@ -175,6 +186,7 @@ export async function addMaterialAction(form: FormData) {
 }
 
 export async function sendReportAction(form: FormData) {
+  await requireOffice();
   const projectId = str(form, "project_id");
   const r = await sendReport(projectId, { force: true });
   refreshAll();
@@ -186,6 +198,7 @@ export async function sendReportAction(form: FormData) {
 }
 
 export async function addDecisionAction(form: FormData) {
+  await requireOffice();
   const projectId = str(form, "project_id");
   const question = str(form, "question");
   if (!question) redirect(withMsg(back(form, `/projects/${projectId}`), "Write the question first"));
@@ -205,6 +218,7 @@ export async function addDecisionAction(form: FormData) {
 }
 
 export async function projectStatusAction(form: FormData) {
+  await requireOffice();
   const id = str(form, "id");
   const status = str(form, "status");
   if (!["active", "handover", "closed"].includes(status)) throw new Error("Bad status");
@@ -216,6 +230,7 @@ export async function projectStatusAction(form: FormData) {
 // ---------- Planner ----------
 
 export async function previewPlanAction(input: { templateId: string; notes: string; useAi: boolean; plannedDays: number }): Promise<PlanPreview | { error: string }> {
+  await requireOffice();
   try {
     return await buildPlan(input.templateId, { notes: input.notes, useAi: input.useAi, plannedDays: input.plannedDays });
   } catch (e) {
@@ -236,6 +251,7 @@ export async function createProjectAction(input: {
   tasks: PlanTask[];
   materials: PlanMaterial[];
 }): Promise<{ error: string } | never> {
+  await requireOffice();
   if (!input.name.trim() || !input.city.trim()) return { error: "Add the clinic name and city" };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.startDate)) return { error: "Pick a start date" };
   let created: { id: string; code: string };
@@ -259,6 +275,7 @@ export async function createProjectAction(input: {
 // ---------- People ----------
 
 export async function savePersonAction(form: FormData) {
+  await requireOffice();
   const id = str(form, "id");
   const name = str(form, "name");
   const role = str(form, "role") as Role;
@@ -271,12 +288,14 @@ export async function savePersonAction(form: FormData) {
 }
 
 export async function unlinkPersonAction(form: FormData) {
+  await requireOffice();
   await db().from("people").update({ telegram_chat_id: null }).eq("id", str(form, "id"));
   refreshAll();
   redirect(withMsg("/people", "Telegram unlinked"));
 }
 
 export async function newLinkCodeAction(form: FormData) {
+  await requireOffice();
   const code = Array.from(crypto.getRandomValues(new Uint8Array(3)), (b) => b.toString(16).padStart(2, "0")).join("").toUpperCase();
   await db().from("people").update({ link_code: code }).eq("id", str(form, "id"));
   refreshAll();
@@ -284,6 +303,7 @@ export async function newLinkCodeAction(form: FormData) {
 }
 
 export async function testMessageAction(form: FormData) {
+  await requireOffice();
   const { data } = await db().from("people").select("*").eq("id", str(form, "id")).single();
   const p = data as Person;
   const r = await notifyPerson(p, "test", `Test from Tensor. ${p.name}, you are linked as ${p.role}.`);
@@ -294,6 +314,7 @@ export async function testMessageAction(form: FormData) {
 // ---------- Settings ----------
 
 export async function autopilotAction(form: FormData) {
+  await requireOffice();
   const enabled = form.get("enabled") === "on";
   const min = Math.min(0.99, Math.max(0.5, Number(str(form, "min_confidence")) || 0.9));
   await setAutopilot({ enabled, min_confidence: min });
@@ -302,6 +323,7 @@ export async function autopilotAction(form: FormData) {
 }
 
 export async function runChecksAction(form: FormData) {
+  await requireOffice();
   const s = await runDailyChecks({ force: true });
   refreshAll();
   const reports = s.reports.filter((r) => r.status === "sent" || r.status === "skipped").length;
@@ -309,6 +331,7 @@ export async function runChecksAction(form: FormData) {
 }
 
 export async function resetDemoAction(form: FormData) {
+  await requireOffice();
   if (str(form, "confirm") !== "RESET") redirect(withMsg("/settings", "Type RESET to confirm"));
   must(await db().rpc("reseed_demo"), "reset demo");
   refreshAll();

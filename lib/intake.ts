@@ -67,7 +67,10 @@ function siteButtons(updateId: string, projects: Project[]): Button[][] {
 
 async function linkChat(chatId: number, code: string, from?: TgUser) {
   const sb = db();
-  const { data } = await sb.from("people").select("*").ilike("link_code", code.trim()).maybeSingle();
+  const clean = code.trim().toUpperCase();
+  const { data } = /^[A-Z0-9]{4,12}$/.test(clean)
+    ? await sb.from("people").select("*").eq("link_code", clean).maybeSingle()
+    : { data: null };
   const person = data as Person | null;
   if (!person) {
     await reply(chatId, "That code did not match anyone. Ask the office for your Tensor code and send /start CODE.\nकोड सही नहीं है। ऑफिस से अपना कोड लें।");
