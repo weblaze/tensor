@@ -21,6 +21,7 @@ const KIND_WORD: Record<string, string> = {
   material_issue: "Material issue",
   decision: "Decision",
   test: "Test",
+  decision_answer: "Doctor answered",
 };
 
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ msg?: string }> }) {

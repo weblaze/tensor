@@ -111,7 +111,7 @@ export interface ApproveInput {
 }
 
 /** Approve: save the coordinator's choices, apply the action, notify procurement/head now. Doctor items wait for the nightly report. */
-export async function approveUpdate(id: string, input: ApproveInput): Promise<{ action: string | null; notified: string[] }> {
+export async function approveUpdate(id: string, input: ApproveInput): Promise<{ action: string | null; notified: { target: RouteTarget; sent: boolean }[] }> {
   const sb = db();
   const u = must(await sb.from("updates").select("*").eq("id", id).single(), "load update") as Update;
   const routes = [...new Set(input.routes)];
@@ -133,14 +133,14 @@ export async function approveUpdate(id: string, input: ApproveInput): Promise<{ 
 
   const { project, person } = await loadUpdateContext(updated);
   const photo = updated.kind === "photo" && updated.media_path ? (await signedUrls([updated.media_path])).get(updated.media_path) ?? null : null;
-  const notified: string[] = [];
+  const notified: { target: RouteTarget; sent: boolean }[] = [];
   for (const target of ["procurement", "head"] as const) {
     if (!routes.includes(target)) continue;
-    await notifyRole(target, `update_${target}`, routeMessage(updated, project, person, actionLine, target), {
+    const results = await notifyRole(target, `update_${target}`, routeMessage(updated, project, person, actionLine, target), {
       projectId: updated.project_id,
       photoUrl: photo,
     });
-    notified.push(target);
+    notified.push({ target, sent: results.some((r) => r.status === "sent") });
   }
   return { action: actionLine, notified };
 }

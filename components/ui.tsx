@@ -57,7 +57,7 @@ export function MaterialStatusTag({ status, daysToOrder }: { status: MaterialSta
   if (status === "ordered") return <StatusTag icon="truck">Ordered</StatusTag>;
   if (daysToOrder < 0) return <StatusTag tone="overdue">Overdue {plural(-daysToOrder, "day")}</StatusTag>;
   if (daysToOrder === 0) return <StatusTag tone="attention">Order today</StatusTag>;
-  if (daysToOrder <= 2) return <StatusTag tone="attention">Order in {plural(daysToOrder, "day")}</StatusTag>;
+  if (daysToOrder <= 2) return <StatusTag tone="attention">{daysToOrder === 1 ? "Order tomorrow" : `Order in ${plural(daysToOrder, "day")}`}</StatusTag>;
   return <StatusTag icon="clock">To order</StatusTag>;
 }
 

@@ -33,6 +33,8 @@ function refreshAll() {
 
 export interface ReviewResult { ok: boolean; message: string }
 
+const WHO: Record<RouteTarget, string> = { doctor: "the doctor", procurement: "procurement", head: "Prashant" };
+
 export async function approveUpdateAction(form: FormData): Promise<ReviewResult> {
   await requireOffice();
   const id = str(form, "id");
@@ -49,7 +51,8 @@ export async function approveUpdateAction(form: FormData): Promise<ReviewResult>
     const parts = [
       "Approved",
       res.action ? res.action : null,
-      res.notified.length ? `sent to ${res.notified.join(" and ")}` : null,
+      res.notified.filter((n) => n.sent).length ? `sent to ${res.notified.filter((n) => n.sent).map((n) => WHO[n.target]).join(" and ")}` : null,
+      res.notified.filter((n) => !n.sent).length ? `${res.notified.filter((n) => !n.sent).map((n) => WHO[n.target]).join(" and ")} not on Telegram yet, logged in Settings` : null,
       routes.includes("doctor") ? "in tonight's doctor report" : null,
     ].filter(Boolean);
     return { ok: true, message: parts.join(" · ") };
