@@ -6,7 +6,7 @@ The owner of this repo is Arunav Ganguly. He works with multiple Claude Code age
 
 ## Read before working
 
-1. `docs/01-business-context.md`: who the users are, how they work today, what hurts.
+1. `docs/01-business-context.md`: who the users are, how they work today, what hurts. (Local only: it and `docs/05-costs.md` are git-ignored because the repo is public. Ask Arunav if missing.)
 2. `docs/02-product-spec.md`: the workflow and every feature, with what is in and out of the demo.
 3. `docs/03-architecture.md`: stack, accounts, data model, env, conventions.
 4. `docs/06-build-plan.md`: workstreams for parallel agents, ownership rules, demo script.
