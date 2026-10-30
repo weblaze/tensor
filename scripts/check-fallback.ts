@@ -19,6 +19,8 @@ const cases = [
   "epoxy base coat ho gaya OT mein, kal second coat",
   "hermetic door delivery nahi aaya, vendor delay",
   "MGPS pressure test done",
+  "painting lagaani hai first floor pe",
+  "ground floor tiles laga diya",
   "",
 ];
 for (const text of cases) {
