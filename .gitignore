@@ -13,3 +13,7 @@ next-env.d.ts
 
 # Cloudflare local secrets for `npm run preview`
 .dev.vars*
+
+# Internal business docs: local only, never pushed (repo is public)
+docs/01-business-context.md
+docs/05-costs.md
