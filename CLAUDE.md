@@ -34,5 +34,6 @@ An order comes in → the **office coordinator** sets up the project in Tensor's
 - Applied migrations: `20261030000000_core_schema`, `20261030010000_learning_seed` (views `learned_lead_times`, `learned_tasks`, table `notifications`, `reseed_demo()`), `20261030020000_reseed_times`. Demo data is seeded.
 - Built (WS0–WS4): the Next.js 15 app with every screen in the product spec, Telegram intake + local poller, Gemini AI with keyword fallback, routing/autopilot, doctor report, hourly checks, Cloudflare Workers config (`opennextjs-cloudflare build` passes). See `docs/09-run-and-deploy.md` and `docs/demo-script.md`.
 - Dev without a Supabase key: `TENSOR_FIXTURE=1` runs on in-memory demo data (`lib/fixture/`, dev only). Keep `lib/fixture/seed.ts` in step with `reseed_demo()`.
-- Still needs Arunav: Supabase secret key in `.env.local`, Telegram bot token, Gemini key, `wrangler login` + deploy, webhook registration, pg_cron job (SQL in `docs/09`), GitHub repo.
+- Verified against live Supabase (2026-10-30): every screen, approve/hold, planner create, daily checks, doctor decisions, Telegram intake, private storage with signed URLs. Supabase secret key and the Telegram bot (@tensortestbot, commands and description set) are in the local `.env.local`.
+- Still needs Arunav: Gemini key, `wrangler login` + deploy, webhook registration, pg_cron job (SQL in `docs/09`), GitHub repo.
 - Superseded and to be ignored: an earlier attempt (GitHub `weblaze/ops-tracker`, paused Supabase project `ops-tracker`) and the Google Forms + Sheets track.
