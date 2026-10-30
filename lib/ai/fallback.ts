@@ -11,7 +11,7 @@ const TRADE_WORDS: [string, RegExp][] = [
   ["Panelling", /\b(panel|panels|panelling|hpl|cladding|modular)\b/],
   ["Doors", /\b(door|doors|hermetic|darwaza|darwaja)\b/],
   ["Sanitary", /\b(sanitary|wc|basin|tap|taps|commode|toilet fitting|jaquar|cistern)\b/],
-  ["Civil", /\b(gypsum|plaster|wall|ceiling|civil|demolition|debris|brick|cement|labour|labor|mazdoor|marking|survey|paint)\b/],
+  ["Civil", /\b(gypsum|plaster|wall|ceiling|civil|demolition|debris|brick|cement|labour|labor|mazdoor|marking|survey|paint\w*|putty)\b/],
 ];
 
 const CRITICAL = /\b(ot|operation theat\w*|lab|embryo\w*|cryo\w*|collection|clean ?room|critical|mgps|ahu|hepa|hermetic|epoxy)\b/;
@@ -53,6 +53,12 @@ const HINGLISH: [RegExp, string][] = [
   [/\baa gaya\b|\baa gaye\b|\bpahunch gaya\b/gi, "received"],
   [/\bshuru\b/gi, "started"],
   [/\bkam hai\b/gi, "short"],
+  [/\b(lagaani|lagani|lagana|karni|karna|karna) hai\b/gi, "to be done"],
+  // Hindi postpositions come after the place: "first floor pe" → "on first floor".
+  [/\b((?:\w+\s+)?floor|site|ot|lab|reception|wall|ceiling)\s+(?:pe|par)\b/gi, "on $1"],
+  [/\b((?:\w+\s+)?floor|site|ot|lab|reception|wall|ceiling)\s+mein\b/gi, "in $1"],
+  [/\b(pe|par)\b/gi, "on"],
+  [/\blaga diya\b|\blag gaya\b|\blag gaye\b/gi, "installed"],
   [/\btoot gaye\b|\btoot gaya\b|\btoote\b|\btoota\b/gi, "broken"],
   [/\bkharab\b/gi, "damaged"],
   [/\baadmi\b/gi, "men"],
@@ -77,8 +83,11 @@ export function cleanNote(raw: string): string {
   return s.length > 140 ? `${s.slice(0, 137)}…` : s;
 }
 
+// "first floor", "ground floor" say where, not what: drop them before guessing the trade.
+const FLOOR_LEVEL = /\b(ground|first|second|third|top|1st|2nd|3rd|upper|lower|basement)\s+floor\b/g;
+
 export function guessTrade(text: string): string | null {
-  const t = text.toLowerCase();
+  const t = text.toLowerCase().replace(FLOOR_LEVEL, " ");
   for (const [trade, re] of TRADE_WORDS) if (re.test(t)) return trade;
   return null;
 }
