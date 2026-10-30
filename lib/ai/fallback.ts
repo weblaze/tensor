@@ -46,6 +46,7 @@ function overlap(text: string, label: string): number {
 const HINGLISH: [RegExp, string][] = [
   [/\bnahi aaye\b/gi, "absent"],
   [/\bsite pe\b|\bsite par\b/gi, "on site"],
+  [/\bsab theek\b|\bsab thik\b/gi, "all fine"],
   [/\bnahi aaya\b/gi, "not arrived"],
   [/\bnahi mila\b/gi, "not received"],
   [/\bho gaya\b|\bho gaye\b|\bpura ho gaya\b/gi, "done"],
