@@ -157,7 +157,7 @@ const clean = (s: unknown, max = 80) => String(s ?? "").replace(/\s+/g, " ").tri
 const uniq = (xs: string[]) => [...new Set(xs.map((x) => clean(x)).filter(Boolean))];
 
 /** Save what the setup wizard collected as a template. Days in the payload count from 1. */
-export async function createTemplateFromWizardAction(input: WizardTemplate): Promise<{ error: string } | never> {
+export async function createTemplateFromWizardAction(input: WizardTemplate, templateId?: string): Promise<{ error: string } | never> {
   await requireOffice();
   const name = clean(input.name, 120);
   const phases = uniq(input.phases);
@@ -184,7 +184,7 @@ export async function createTemplateFromWizardAction(input: WizardTemplate): Pro
   const day = (n: number) => Math.max(0, Math.min(days - 1, Math.round(Number(n) || 1) - 1));
 
   const sb = db();
-  const tpl = must(await sb.from("templates").insert({
+  const row = {
     name,
     description: clean(input.description, 200) || null,
     default_days: days,
@@ -193,7 +193,16 @@ export async function createTemplateFromWizardAction(input: WizardTemplate): Pro
     trades,
     zone_labels: { critical: clean(input.zones.critical, 30) || "Critical", general: clean(input.zones.general, 30) || "General" },
     project_fields: fields,
-  }).select("id").single(), "create template") as { id: string };
+  };
+  let tpl: { id: string };
+  if (templateId) {
+    // Editing an existing template's setup replaces its plan rows; running projects keep their own copies.
+    tpl = must(await sb.from("templates").update(row).eq("id", templateId).select("id").single(), "save template") as { id: string };
+    must(await sb.from("template_tasks").delete().eq("template_id", tpl.id), "replace tasks");
+    must(await sb.from("template_materials").delete().eq("template_id", tpl.id), "replace materials");
+  } else {
+    tpl = must(await sb.from("templates").insert(row).select("id").single(), "create template") as { id: string };
+  }
 
   const tasks = input.tasks.filter((t) => clean(t.title)).map((t, i) => ({
     template_id: tpl.id,
@@ -216,5 +225,7 @@ export async function createTemplateFromWizardAction(input: WizardTemplate): Pro
   }));
   if (tasks.length) must(await sb.from("template_tasks").insert(tasks), "save tasks");
   if (materials.length) must(await sb.from("template_materials").insert(materials), "save materials");
-  done(`/settings/templates/${tpl.id}`, `Your template is ready: ${phases.length} phases, ${tasks.length} tasks, ${materials.length} materials. Plan a project from it next.`);
+  done(`/settings/templates/${tpl.id}`, templateId
+    ? `Setup saved: ${phases.length} phases, ${tasks.length} tasks, ${materials.length} materials. Running projects keep their own copy.`
+    : `Your template is ready: ${phases.length} phases, ${tasks.length} tasks, ${materials.length} materials. Plan a project from it next.`);
 }

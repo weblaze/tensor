@@ -204,3 +204,19 @@ details.more[open] > summary::before { content: "−"; }
 .outbox-body { white-space: pre-wrap; font: 400 14px/20px var(--font-sans); }
 legend { padding: 0; }
 @media (max-width: 760px) { .hide-sm { display: none !important; } }
+
+/* Setup wizard rows: columns on desktop, stacked pairs on phones */
+.wiz-row { align-items: center; }
+.wiz-row--list { grid-template-columns: auto minmax(0, 1fr) auto; }
+.wiz-row--status { grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto; }
+.wiz-row--field { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto auto; }
+.wiz-row--task { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr) minmax(0, 2fr) 80px 72px auto; }
+.wiz-row--mat { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr) 72px minmax(0, 1fr) 80px 80px auto; }
+@media (max-width: 760px) {
+  .wiz-row--status, .wiz-row--field, .wiz-row--task, .wiz-row--mat { grid-template-columns: 1fr 1fr; }
+  .wiz-row--task > :first-child, .wiz-row--mat > :first-child, .wiz-row--field > :first-child { grid-column: 1 / -1; }
+  .wiz-row--list { grid-template-columns: auto minmax(0, 1fr); }
+  .wiz-row--list > .rowi__side { grid-column: 1 / -1; justify-content: flex-end; }
+}
+.wiz-row > * { min-width: 0; }
+.wiz-row .tn-input { width: 100%; min-width: 0; }
