@@ -2,13 +2,15 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { addDays, diffDays, fmtShort, plural } from "@/lib/dates";
 import type { PlanMaterial, PlanPreview, PlanTask } from "@/lib/planner";
+import type { ProjectFieldDef } from "@/lib/templateConfig";
 import { createProjectAction, previewPlanAction } from "../../actions";
 import { Icon } from "@/components/Icon";
 
 interface Opt { id: string; name: string }
 
 export function Planner(props: {
-  templates: { id: string; name: string; days: number; description: string | null }[];
+  templates: { id: string; name: string; days: number; description: string | null; fields: ProjectFieldDef[] }[];
+  people: { id: string; name: string }[];
   doctors: Opt[];
   supervisors: Opt[];
   coordinators: Opt[];
@@ -26,6 +28,9 @@ export function Planner(props: {
   const [startDate, setStartDate] = useState(props.defaultStart);
   const [plannedDays, setPlannedDays] = useState(first?.days ?? 45);
   const [notes, setNotes] = useState("");
+  const [details, setDetails] = useState<Record<string, string>>({});
+  const fields = props.templates.find((t) => t.id === templateId)?.fields ?? [];
+  const missing = fields.filter((f) => f.required && !details[f.key]?.trim());
   const [plan, setPlan] = useState<PlanPreview | null>(null);
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +75,7 @@ export function Planner(props: {
     setError(null);
     startSaving(async () => {
       const res = await createProjectAction({
-        name, city, templateId, doctorId, supervisorId, coordinatorId, startDate, plannedDays, orderNotes: notes,
+        name, city, templateId, doctorId, supervisorId, coordinatorId, startDate, plannedDays, orderNotes: notes, details,
         tasks: keptTasks, materials: keptMaterials,
       });
       if (res && "error" in res) setError(res.error);
@@ -131,6 +136,24 @@ export function Planner(props: {
             <span className="tn-help">Handover {fmtShort(addDays(startDate, plannedDays - 1))}</span>
           </label>
         </div>
+        {fields.length ? (
+          <div className="form-grid">
+            {fields.map((f) => (
+              <label key={f.key} className="tn-field">
+                <span className="tn-label">{f.label}{f.required ? "" : " (optional)"}</span>
+                {f.kind === "person" ? (
+                  <select className="tn-input" value={details[f.key] ?? ""} onChange={(e) => setDetails({ ...details, [f.key]: e.target.value })}>
+                    <option value="">Choose</option>
+                    {props.people.map((p) => <option key={p.id} value={p.name}>{p.name}</option>)}
+                  </select>
+                ) : (
+                  <input className="tn-input" type={f.kind === "date" ? "date" : f.kind === "phone" ? "tel" : "text"} value={details[f.key] ?? ""} onChange={(e) => setDetails({ ...details, [f.key]: e.target.value })} />
+                )}
+                {f.help ? <span className="tn-help">{f.help}</span> : null}
+              </label>
+            ))}
+          </div>
+        ) : null}
         <label className="tn-field">
           <span className="tn-label">Order notes</span>
           <textarea className="tn-input" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="First floor. Existing AC to be removed. Cryostorage room needs extra power point." />
@@ -181,8 +204,8 @@ export function Planner(props: {
 
       {error ? <div className="flash flash--error"><Icon name="alert" /><span>{error}</span></div> : null}
       <div className="row-between">
-        <span className="tn-caption">The supervisor&apos;s Telegram updates go to this site once it starts.</span>
-        <button type="button" className="tn-btn tn-btn--primary" onClick={submit} disabled={saving || loading || !name.trim() || !city.trim() || !plan}>
+        <span className="tn-caption">{missing.length ? `Fill in ${missing.map((f) => f.label).join(", ")} first.` : "The supervisor's Telegram updates go to this site once it starts."}</span>
+        <button type="button" className="tn-btn tn-btn--primary" onClick={submit} disabled={saving || loading || !name.trim() || !city.trim() || !plan || missing.length > 0}>
           <Icon name="check" />
           {saving ? "Creating" : "Create project"}
         </button>

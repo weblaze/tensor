@@ -82,6 +82,7 @@ export interface Project {
   report_token: string;
   last_report_sent_on: string | null;
   created_at: string;
+  phases?: unknown;
   task_statuses?: unknown;
   trades?: unknown;
   zone_labels?: unknown;

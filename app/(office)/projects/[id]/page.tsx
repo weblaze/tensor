@@ -56,7 +56,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
     sb.from("decisions").select("*").eq("project_id", id).order("asked_at", { ascending: false }),
     sb.from("people").select("*"),
   ]);
-  const tasks = ((tr.data ?? []) as Task[]).sort((a, b) => phaseRank(a.phase) - phaseRank(b.phase) || a.planned_start.localeCompare(b.planned_start) || a.sort - b.sort);
+  const tasks = ((tr.data ?? []) as Task[]).sort((a, b) => phaseRank(a.phase, cfg.phases) - phaseRank(b.phase, cfg.phases) || a.planned_start.localeCompare(b.planned_start) || a.sort - b.sort);
   const materials = (mr.data ?? []) as Material[];
   const updates = (ur.data ?? []) as Update[];
   const decisions = (dr.data ?? []) as Decision[];

@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { MANAGERS, requireOffice, requireRole } from "@/lib/auth";
 import { demoMode, headName, newLinkCode } from "@/lib/config";
+import { configOf } from "@/lib/templateConfig";
 import { db, must } from "@/lib/db";
 import { fmtShort } from "@/lib/dates";
 import { notifyPerson, notifyRole } from "@/lib/notify";
@@ -258,11 +259,15 @@ export async function createProjectAction(input: {
   startDate: string;
   plannedDays: number;
   orderNotes: string;
+  details?: Record<string, string>;
   tasks: PlanTask[];
   materials: PlanMaterial[];
 }): Promise<{ error: string } | never> {
   await requireOffice();
   if (!input.name.trim() || !input.city.trim()) return { error: "Add the clinic name and city" };
+  const { data: tpl } = await db().from("templates").select("project_fields").eq("id", input.templateId).maybeSingle();
+  const missing = configOf(tpl).project_fields.filter((f) => f.required && !input.details?.[f.key]?.trim());
+  if (missing.length) return { error: `Fill in ${missing.map((f) => f.label).join(", ")}` };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.startDate)) return { error: "Pick a start date" };
   let created: { id: string; code: string };
   try {

@@ -34,6 +34,14 @@ export default async function TemplatesPage({ searchParams }: { searchParams: Pr
         </div>
       </div>
 
+      <div className="card row-between" style={{ marginBottom: 16 }}>
+        <div className="stack-2">
+          <h2 className="tn-heading">Setup wizard</h2>
+          <p className="tn-muted">Nine short steps: phases, status names, trades, zones, project contacts, tasks and materials.</p>
+        </div>
+        <Link href="/settings/templates/new?tutorial=1" className="tn-btn"><Icon name="bolt" />Start the wizard</Link>
+      </div>
+
       <div className="split">
         <div className="rows">
           {templates.length === 0 ? <div className="empty">No templates yet. Create one to start planning projects.</div> : templates.map((t) => (
@@ -67,6 +75,10 @@ export default async function TemplatesPage({ searchParams }: { searchParams: Pr
             <label className="tn-field">
               <span className="tn-label">Description</span>
               <input className="tn-input" name="description" placeholder="What kind of clinic this suits" />
+            </label>
+            <label className="check">
+              <input type="checkbox" name="wizard" defaultChecked />
+              <span>From blank: guide me step by step, with explanations</span>
             </label>
             <div><button className="tn-btn tn-btn--primary"><Icon name="plus" />Create template</button></div>
           </form>
