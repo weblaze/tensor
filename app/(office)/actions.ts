@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireOffice } from "@/lib/auth";
-import { demoMode, headName } from "@/lib/config";
+import { demoMode, headName, newLinkCode } from "@/lib/config";
 import { db, must } from "@/lib/db";
 import { fmtShort } from "@/lib/dates";
 import { notifyPerson, notifyRole } from "@/lib/notify";
@@ -299,7 +299,7 @@ export async function unlinkPersonAction(form: FormData) {
 
 export async function newLinkCodeAction(form: FormData) {
   await requireOffice();
-  const code = Array.from(crypto.getRandomValues(new Uint8Array(3)), (b) => b.toString(16).padStart(2, "0")).join("").toUpperCase();
+  const code = newLinkCode();
   await db().from("people").update({ link_code: code }).eq("id", str(form, "id"));
   refreshAll();
   redirect(withMsg("/people", `New code ${code}`));

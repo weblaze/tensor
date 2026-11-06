@@ -4,6 +4,7 @@ import { today } from "./dates";
 import { channel, type Button } from "./messaging";
 import { classify, transcribe, type ClassifyInput, type Example } from "./ai";
 import { maybeAutopilot, setMaterialStatus } from "./routing";
+import { newLinkCode } from "./config";
 import type { Decision, Person, Project, RouteTarget, Update, UpdateKind } from "./types";
 
 // Minimal Telegram update shapes (only what we read).
@@ -77,7 +78,8 @@ async function linkChat(chatId: number, code: string, from?: TgUser) {
     return;
   }
   await sb.from("people").update({ telegram_chat_id: null }).eq("telegram_chat_id", chatId).neq("id", person.id);
-  must(await sb.from("people").update({ telegram_chat_id: chatId }).eq("id", person.id), "link chat");
+  // A code works once: a fresh one replaces it, so a shared or leaked code cannot take over the link.
+  must(await sb.from("people").update({ telegram_chat_id: chatId, link_code: newLinkCode() }).eq("id", person.id), "link chat");
   const hello = `Linked as ${person.name}${from?.first_name && !person.name.includes(from.first_name) ? ` (${from.first_name})` : ""}.`;
   await reply(chatId, `${hello}\n${ROLE_HELP[person.role]}`);
 }
