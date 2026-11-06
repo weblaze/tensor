@@ -2,6 +2,7 @@ import "server-only";
 import { db, must } from "./db";
 import { addDays, today } from "./dates";
 import { suggestPlan } from "./ai";
+import { configOf, DEFAULT_CONFIG } from "./templateConfig";
 import type { Source, Template, TemplateMaterial, TemplateTask, Zone } from "./types";
 
 export interface PlanTask {
@@ -35,11 +36,12 @@ export interface PlanPreview {
   aiEngine: "gemini" | "keywords" | null;
 }
 
-const PHASE_ORDER = ["Site setup", "Services", "Build", "Finishes", "HVAC", "Handover"];
+const PHASE_ORDER = DEFAULT_CONFIG.phases;
 
-export function phaseRank(phase: string): number {
-  const i = PHASE_ORDER.indexOf(phase);
-  return i === -1 ? PHASE_ORDER.length : i;
+/** Position of a phase in the office's own order (a template's or project's phases), unknown last. */
+export function phaseRank(phase: string, order: string[] = PHASE_ORDER): number {
+  const i = order.indexOf(phase);
+  return i === -1 ? order.length : i;
 }
 
 export async function listTemplates(): Promise<Template[]> {
@@ -119,7 +121,8 @@ export async function buildPlan(templateId: string, opts: { notes?: string; useA
     s.materials.forEach((m, i) => materials.push({ ...m, key: `a-m-${i}`, source: "ai" }));
   }
 
-  tasks.sort((a, b) => phaseRank(a.phase) - phaseRank(b.phase) || a.start_day - b.start_day);
+  const order = configOf(template).phases;
+  tasks.sort((a, b) => phaseRank(a.phase, order) - phaseRank(b.phase, order) || a.start_day - b.start_day);
   materials.sort((a, b) => a.need_day - a.lead_time_days - (b.need_day - b.lead_time_days));
   return { tasks, materials, aiEngine };
 }
@@ -140,6 +143,8 @@ export interface CreateProjectInput {
   startDate: string;
   plannedDays: number;
   orderNotes: string;
+  /** Values for the template's project detail fields, by key. */
+  details?: Record<string, string>;
   tasks: PlanTask[];
   materials: PlanMaterial[];
 }
@@ -159,6 +164,9 @@ export async function createProject(input: CreateProjectInput): Promise<{ id: st
       start_date: input.startDate,
       planned_days: input.plannedDays,
       order_notes: input.orderNotes || null,
+      // The project keeps its own copy of how this office works, so later template edits don't change it.
+      ...(await templateConfigCopy(input.templateId)),
+      details: input.details ?? {},
     }).select("id, code").single(),
     "create project",
   ) as { id: string; code: string };
@@ -198,4 +206,10 @@ export async function createProject(input: CreateProjectInput): Promise<{ id: st
     await sb.from("people").update({ current_project_id: project.id }).eq("id", input.supervisorId).is("current_project_id", null);
   }
   return project;
+}
+
+async function templateConfigCopy(templateId: string) {
+  const { data } = await db().from("templates").select("phases, task_statuses, trades, zone_labels, project_fields").eq("id", templateId).maybeSingle();
+  const cfg = configOf(data);
+  return { phases: cfg.phases, task_statuses: cfg.task_statuses, trades: cfg.trades, zone_labels: cfg.zone_labels, project_fields: cfg.project_fields };
 }

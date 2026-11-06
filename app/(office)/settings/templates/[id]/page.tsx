@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { phaseRank } from "@/lib/planner";
+import { configOf } from "@/lib/templateConfig";
 import { TRADES, type Template, type TemplateMaterial, type TemplateTask } from "@/lib/types";
 import { Flash, TradeTag, ZoneTag } from "@/components/ui";
 import { Icon } from "@/components/Icon";
@@ -77,7 +78,7 @@ export default async function TemplatePage({ params, searchParams }: { params: P
   ]);
   if (!tr.data) notFound();
   const template = tr.data as Template;
-  const tasks = ((tt.data ?? []) as TemplateTask[]).sort((a, b) => phaseRank(a.phase) - phaseRank(b.phase) || a.start_day - b.start_day || a.sort - b.sort);
+  const tasks = ((tt.data ?? []) as TemplateTask[]).sort((a, b) => phaseRank(a.phase, configOf(template).phases) - phaseRank(b.phase, configOf(template).phases) || a.start_day - b.start_day || a.sort - b.sort);
   const materials = (tm.data ?? []) as TemplateMaterial[];
   const phases = [...new Set(tasks.map((t) => t.phase))];
   const hidden = <input type="hidden" name="template_id" value={id} />;

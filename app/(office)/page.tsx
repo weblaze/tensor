@@ -6,6 +6,7 @@ import { Clear, DayCounter, Flash, StatusTag } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import { escalateAction, materialStatusAction, remindSupervisorAction } from "./actions";
 import { headName } from "@/lib/config";
+import { db } from "@/lib/db";
 
 export const metadata = { title: "Today" };
 
@@ -60,7 +61,11 @@ function ExceptionAction({ e }: { e: Exception }) {
 export default async function TodayPage({ searchParams }: { searchParams: Promise<{ msg?: string }> }) {
   await requirePage(...MANAGERS);
   const { msg } = await searchParams;
-  const [snap, head] = await Promise.all([loadSnapshot(), headName()]);
+  const [snap, head, tplCount] = await Promise.all([
+    loadSnapshot(),
+    headName(),
+    db().from("templates").select("id", { count: "exact", head: true }).then((r) => r.count ?? 0),
+  ]);
   const t0 = today();
   const exceptions = exceptionsFor(snap, t0);
   const active = snap.projects.filter((p) => p.status !== "closed");
@@ -73,6 +78,14 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   return (
     <main className="page">
       {msg ? <Flash>{msg}</Flash> : null}
+      {tplCount === 0 ? (
+        <div className="card stack-4" style={{ marginBottom: 24, borderColor: "var(--scrub)" }}>
+          <span className="tn-stamp">Welcome to Tensor</span>
+          <h2 className="tn-heading">First, set up how your office works</h2>
+          <p className="tn-muted">A short guided setup: your phases, the words you use for a task&apos;s status, trades, project contacts, and the tasks and materials you usually need. Then plan your first project.</p>
+          <div><Link href="/settings/templates/new?tutorial=1" className="tn-btn tn-btn--primary"><Icon name="bolt" />Start setup</Link></div>
+        </div>
+      ) : null}
       <div className="page-head">
         <div className="page-head__text">
           <span className="tn-stamp">{fmtDate(t0)}</span>

@@ -1,6 +1,7 @@
 // Offline demo data: a TypeScript port of supabase reseed_demo(), used only when TENSOR_FIXTURE=1.
 // Keep in step with supabase/migrations/*_learning_seed.sql.
 import { addDays, today } from "../dates";
+import { DEFAULT_CONFIG } from "../templateConfig";
 
 export type Row = Record<string, unknown>;
 export type Tables = Record<string, Row[]>;
@@ -65,7 +66,7 @@ export function seedTables(keep: Row[] = []): Tables {
   const pid = (n: string) => people.find((p) => p.name === n)!.id as string;
 
   const tpl = uuid();
-  const templates = [{ id: tpl, name: "IVF lab — standard fit-out", description: "Turnkey IVF clinic: OT, embryology lab, cryostorage, collection room plus reception and consult.", default_days: 45 }];
+  const templates = [{ id: tpl, name: "IVF lab — standard fit-out", description: "Turnkey IVF clinic: OT, embryology lab, cryostorage, collection room plus reception and consult.", default_days: 45, ...DEFAULT_CONFIG }];
   const template_tasks = TEMPLATE_TASKS.map(([phase, title, trade, zone, start_day, duration_days], i) => ({ id: uuid(), template_id: tpl, phase, title, trade, zone, start_day, duration_days, sort: i + 1 }));
   const template_materials = TEMPLATE_MATERIALS.map(([item, trade, qty, unit, lead_time_days, need_day]) => ({ id: uuid(), template_id: tpl, item, trade, qty, unit, lead_time_days, need_day }));
 
