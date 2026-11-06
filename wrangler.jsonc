@@ -16,6 +16,7 @@
     "SUPABASE_URL": "https://gwgthatwoxuggidblodi.supabase.co",
     "GEMINI_MODEL": "gemini-2.5-flash",
     "TELEGRAM_BOT_USERNAME": "tensortestbot",
+    "APP_URL": "https://tensor.designmatrix.workers.dev",
     // Production: no demo badge, no demo reset. Set "1" only on a demo deployment.
     "DEMO_MODE": "0"
   }

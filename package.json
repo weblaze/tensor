@@ -8,11 +8,12 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "poll": "node --env-file=.env.local --experimental-strip-types --no-warnings scripts/poll.ts",
-    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "preview": "npm run build:worker && opennextjs-cloudflare preview",
+    "deploy": "npm run build:worker && opennextjs-cloudflare deploy",
     "webhook": "node --env-file=.env.local --experimental-strip-types --no-warnings scripts/set-webhook.ts",
     "check:ai": "node --experimental-strip-types --no-warnings scripts/check-fallback.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build:worker": "node scripts/build-worker.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
