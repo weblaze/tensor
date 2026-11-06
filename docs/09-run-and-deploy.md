@@ -26,6 +26,7 @@ Then on a phone: open the bot, send `/start OM0142` (Om's code, see People), and
 ```bash
 npm run typecheck
 npm run build
+npm test            # unit tests (also run by GitHub Actions on every push)
 npm run check:ai    # keyword classifier on sample messages
 ```
 
@@ -38,27 +39,35 @@ npm run check:ai    # keyword classifier on sample messages
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME` | secret / var | From @BotFather |
 | `TELEGRAM_WEBHOOK_SECRET` | secret | Any random string |
 | `GEMINI_API_KEY`, `GEMINI_MODEL` | secret / var | Optional. Without it, keyword rules sort updates and voice notes are not transcribed. |
-| `OFFICE_PIN` | secret | Shared office PIN for the demo |
+| `OFFICE_PIN` | secret | Shared office passphrase. Production refuses fewer than 10 characters; 5 wrong tries lock login for 15 minutes |
 | `SESSION_SECRET` | secret | Random string that signs the office cookie |
 | `CRON_SECRET` | secret | Bearer token for `/api/cron` |
 | `APP_URL` | var | Public URL, used in doctor report links |
+| `DEMO_MODE` | var | `1` only on a demo deployment: shows the Demo badge and allows Reset demo data. `0` in production |
 | `TENSOR_FIXTURE` | dev only | `1` = in-memory demo data |
 
 ## Deploy to Cloudflare Workers (free)
 
+Secrets live in `.prod-secrets.json` (git-ignored, generated locally; it holds the office passphrase).
+
 ```bash
-npx wrangler login                       # opens the browser once
-npx wrangler secret put SUPABASE_SECRET_KEY
-npx wrangler secret put TELEGRAM_BOT_TOKEN
-npx wrangler secret put TELEGRAM_WEBHOOK_SECRET
-npx wrangler secret put OFFICE_PIN
-npx wrangler secret put SESSION_SECRET
-npx wrangler secret put CRON_SECRET
-npx wrangler secret put GEMINI_API_KEY   # optional
+npx wrangler login                              # opens the browser once
+npx wrangler secret bulk .prod-secrets.json     # uploads every secret
 npm run deploy
 ```
 
-Add `TELEGRAM_BOT_USERNAME` and `APP_URL` (the `https://tensor.<account>.workers.dev` URL from the deploy output) to `vars` in `wrangler.jsonc` and deploy again.
+Add `APP_URL` (the `https://tensor.<account>.workers.dev` URL from the deploy output) to `vars` in `wrangler.jsonc` and deploy again.
+
+### Database for production
+
+Apply `supabase/migrations/20261106000000_prod_hardening.sql`, then start clean:
+
+```sql
+select reset_to_production();   -- removes demo projects and doctors, keeps templates and staff,
+                                -- issues fresh link codes, turns demo mode off
+```
+
+After this, `reseed_demo()` refuses to run on this database.
 
 The bundle is about 1.3 MB gzipped, under the 3 MB Workers free limit.
 
@@ -91,7 +100,7 @@ The bundle is about 1.3 MB gzipped, under the 3 MB Workers free limit.
 
    Each run is safe to repeat: alerts, escalations and reports are sent once. The doctor report goes from 9 PM India time; quiet-site reminders from 6 PM.
 
-3. Link the demo phones from the People screen (each person sends `/start CODE` to the bot).
+3. Link each person's phone from the People screen (they send `/start CODE` to the bot; each code works once).
 
 ## Fallback host
 
