@@ -35,6 +35,7 @@ function defaults(table: string, row: Row): Row {
   if (table === "updates") Object.assign(base, { received_at: now, is_issue: false, suggested_routes: [], status: "pending", auto_routed: false, final_routes: null, reviewed_at: null });
   if (table === "decisions") Object.assign(base, { asked_at: now, answer: null, answer_note: null, answered_at: null });
   if (table === "notifications") Object.assign(base, { created_at: now, channel: "telegram", status: "sent", error: null });
+  if (table === "login_attempts") Object.assign(base, { at: now, ok: false });
   return { ...base, ...row };
 }
 
