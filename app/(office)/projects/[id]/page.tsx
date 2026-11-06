@@ -1,11 +1,13 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { canManage, requirePage } from "@/lib/auth";
+import { configOf, nextStatus, otherStatuses, statusLabel, type TemplateConfig } from "@/lib/templateConfig";
 import { db, signedUrls } from "@/lib/db";
 import { diffDays, fmtDate, fmtShort, fmtTime, fmtWhen, istDate, plural, today } from "@/lib/dates";
 import { progressOf } from "@/lib/insights";
 import { phaseRank } from "@/lib/planner";
 import { reportUrl } from "@/lib/report";
-import { TRADES, type Decision, type Material, type Person, type Project, type Task, type Update } from "@/lib/types";
+import { type Decision, type Material, type Person, type Project, type Task, type Update } from "@/lib/types";
 import { DayCounter, Flash, KindIcon, MaterialStatusTag, Photo, SourceTag, StatusTag, TaskStatusTag, TradeTag, ZoneTag, stampFor } from "@/components/ui";
 import { CopyLink } from "@/components/CopyLink";
 import { Icon } from "@/components/Icon";
@@ -16,6 +18,7 @@ import {
 } from "../../actions";
 
 type Tab = "updates" | "tasks" | "materials" | "report";
+interface Perms { manage: boolean; materials: boolean; tasks: boolean }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -35,7 +38,15 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
   const { data: pd } = await sb.from("projects").select("*").eq("id", id).maybeSingle();
   if (!pd) notFound();
   const project = pd as Project;
-  const tab: Tab = (["updates", "tasks", "materials", "report"] as Tab[]).includes(tabParam as Tab) ? (tabParam as Tab) : "updates";
+  const viewer = await requirePage();
+  const manage = canManage(viewer);
+  const me = viewer.person?.id;
+  // Doctors read their report; supervisors see their own sites only.
+  if (viewer.role === "doctor") redirect(project.doctor_id === me ? `/r/${project.report_token}` : "/me");
+  if (viewer.role === "supervisor" && project.supervisor_id !== me && viewer.person?.current_project_id !== project.id) redirect("/me");
+  const cfg = configOf(project);
+  const perms: Perms = { manage, materials: manage || viewer.role === "procurement", tasks: manage || viewer.role === "supervisor" };
+  const tab: Tab = (["updates", "tasks", "materials", "report"] as Tab[]).includes(tabParam as Tab) && (manage || tabParam !== "report") ? (tabParam as Tab) : "updates";
   const t0 = today();
 
   const [tr, mr, ur, dr, pr] = await Promise.all([
@@ -70,9 +81,9 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
   return (
     <main className="page">
       {msg ? <Flash>{msg}</Flash> : null}
-      <Link href="/projects" className="tn-btn tn-btn--quiet" style={{ marginLeft: -16, marginBottom: 8 }}>
+      <Link href={manage ? "/projects" : "/me"} className="tn-btn tn-btn--quiet" style={{ marginLeft: -16, marginBottom: 8 }}>
         <Icon name="back" />
-        Projects
+        {manage ? "Projects" : "My work"}
       </Link>
       <div className="page-head" style={{ alignItems: "flex-start" }}>
         <div className="page-head__text" style={{ gap: 8 }}>
@@ -88,7 +99,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
       </div>
 
       <nav className="tabs" aria-label="Project sections">
-        {tabs.map((t) => (
+        {tabs.filter((t) => manage || t.key !== "report").map((t) => (
           <Link key={t.key} href={`${here}?tab=${t.key}`} aria-current={tab === t.key ? "page" : undefined}>
             {t.label}
             {t.count ? <span className="nav-count">{t.count}</span> : null}
@@ -97,8 +108,8 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
       </nav>
 
       {tab === "updates" ? <UpdatesTab project={project} updates={updates} people={people} here={here} /> : null}
-      {tab === "tasks" ? <TasksTab project={project} tasks={tasks} here={`${here}?tab=tasks`} /> : null}
-      {tab === "materials" ? <MaterialsTab head={head} project={project} materials={materials} here={`${here}?tab=materials`} /> : null}
+      {tab === "tasks" ? <TasksTab project={project} tasks={tasks} here={`${here}?tab=tasks`} cfg={cfg} perms={perms} /> : null}
+      {tab === "materials" ? <MaterialsTab head={head} project={project} materials={materials} here={`${here}?tab=materials`} cfg={cfg} perms={perms} /> : null}
       {tab === "report" ? (
         <section className="split">
           <div className="stack-4">
@@ -157,9 +168,14 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
               <dt>Planned</dt><dd>{plural(project.planned_days, "day")}</dd>
               <dt>Handover</dt><dd>{fmtDate(prog.handoverProjected)}</dd>
               <dt>Status</dt><dd>{project.status}</dd>
+              {cfg.project_fields.map((f) => (
+                <div key={f.key} style={{ display: "contents" }}>
+                  <dt>{f.label}</dt><dd>{project.details?.[f.key] || <span className="tn-muted">{f.required ? "Missing" : "Not set"}</span>}</dd>
+                </div>
+              ))}
             </dl>
             {project.order_notes ? <p className="review__raw">{project.order_notes}</p> : null}
-            <ProjectEdit project={project} people={[...people.values()]} back={`${here}?tab=report`} />
+            <ProjectEdit project={project} people={[...people.values()]} back={`${here}?tab=report`} fields={cfg.project_fields} />
             <form action={projectStatusAction} className="tn-row">
               <Hidden fields={{ id, back: `${here}?tab=report` }} />
               <select name="status" className="tn-input" defaultValue={project.status} aria-label="Project status" style={{ flex: 1 }}>
@@ -190,11 +206,13 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
         <div className="row-between" style={{ marginBottom: 16 }}>
           <p className="tn-muted">{last ? `Last update ${fmtWhen(last.received_at)}` : "No updates from site yet."}</p>
           <div className="tn-row">
-            {pendingCount ? <Link href="/inbox" className="tn-btn"><Icon name="inbox" />Review {pendingCount}</Link> : null}
-            <form action={remindSupervisorAction}>
-              <Hidden fields={{ project_id: project.id, back: here }} />
-              <button className="tn-btn tn-btn--quiet"><Icon name="send" />Remind {sup?.name ?? "supervisor"}</button>
-            </form>
+            {manage && pendingCount ? <Link href="/inbox" className="tn-btn"><Icon name="inbox" />Review {pendingCount}</Link> : null}
+            {manage ? (
+              <form action={remindSupervisorAction}>
+                <Hidden fields={{ project_id: project.id, back: here }} />
+                <button className="tn-btn tn-btn--quiet"><Icon name="send" />Remind {sup?.name ?? "supervisor"}</button>
+              </form>
+            ) : null}
           </div>
         </div>
         {[...byDay.entries()].map(([day, list]) => (
@@ -251,7 +269,15 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
   }
 }
 
-function TasksTab({ project, tasks, here }: { project: Project; tasks: Task[]; here: string }) {
+function TaskStatusBadge({ task, cfg, late }: { task: Task; cfg: TemplateConfig; late: number }) {
+  const label = statusLabel(cfg, task.status, task.status_label);
+  if (task.status === "blocked") return <StatusTag tone="overdue">{label}</StatusTag>;
+  if (task.status !== "done" && late > 0) return <StatusTag tone="attention">Late {plural(late, "day")} · {label}</StatusTag>;
+  if (task.status === "done") return <StatusTag>{label}</StatusTag>;
+  return <StatusTag icon={task.status === "doing" ? "bolt" : "clock"}>{label}</StatusTag>;
+}
+
+function TasksTab({ project, tasks, here, cfg, perms }: { project: Project; tasks: Task[]; here: string; cfg: TemplateConfig; perms: Perms }) {
   const t0 = today();
   const phases = [...new Set(tasks.map((t) => t.phase))];
   return (
@@ -264,35 +290,44 @@ function TasksTab({ project, tasks, here }: { project: Project; tasks: Task[]; h
             <div key={phase} style={{ display: "contents" }}>
               <div className="rows__group">
                 <span className="tn-body-strong">{phase}</span>
-                <span className="tn-caption">{done} / {list.length} done</span>
+                <span className="tn-caption">{done} / {list.length} {statusLabel(cfg, "done").toLowerCase()}</span>
               </div>
               {list.map((t) => {
                 const late = diffDays(t0, t.planned_end);
-                const next = t.status === "todo" ? "doing" : t.status === "doing" || t.status === "blocked" ? "done" : "doing";
-                const nextLabel = t.status === "todo" ? "Start" : t.status === "done" ? "Reopen" : "Mark done";
+                const next = nextStatus(cfg, t.status, t.status_label);
+                const others = otherStatuses(cfg, t.status, t.status_label).filter((s) => s.label !== next?.label);
                 return (
                   <div key={t.id} className={`rowi${t.status === "done" ? " rowi--done" : ""}`}>
                     <div className="rowi__main">
                       <span className="rowi__title">{t.title}</span>
                       <span className="rowi__meta">
                         <TradeTag trade={t.trade} />
-                        <ZoneTag zone={t.zone} />
+                        <ZoneTag zone={t.zone} label={cfg.zone_labels[t.zone]} />
                         <span className="tn-data">{t.planned_start === t.planned_end ? fmtShort(t.planned_start) : `${fmtShort(t.planned_start)} – ${fmtShort(t.planned_end)}`}</span>
                         <SourceTag source={t.source} />
                       </span>
-                      <TaskEdit task={t} back={here} />
+                      {perms.manage ? <TaskEdit task={t} back={here} phases={cfg.phases} trades={cfg.trades} zoneLabels={cfg.zone_labels} /> : null}
                     </div>
                     <div className="rowi__side">
-                      <TaskStatusTag status={t.status} lateDays={late} />
-                      <form action={taskStatusAction}>
-                        <Hidden fields={{ id: t.id, status: next, back: here }} />
-                        <button className="tn-btn">{nextLabel}</button>
-                      </form>
-                      {t.status !== "done" && t.status !== "blocked" ? (
+                      <TaskStatusBadge task={t} cfg={cfg} late={late} />
+                      {perms.tasks && next ? (
                         <form action={taskStatusAction}>
-                          <Hidden fields={{ id: t.id, status: "blocked", back: here }} />
-                          <button className="tn-btn tn-btn--quiet">Blocked</button>
+                          <Hidden fields={{ id: t.id, status: next.kind, label: next.label, back: here }} />
+                          <button className="tn-btn">{next.label}</button>
                         </form>
+                      ) : null}
+                      {perms.tasks && others.length ? (
+                        <details className="more">
+                          <summary>Status</summary>
+                          <div className="tn-row" style={{ paddingTop: 4 }}>
+                            {others.map((s) => (
+                              <form key={s.label} action={taskStatusAction}>
+                                <Hidden fields={{ id: t.id, status: s.kind, label: s.label, back: here }} />
+                                <button className="tn-btn tn-btn--quiet">{s.label}</button>
+                              </form>
+                            ))}
+                          </div>
+                        </details>
                       ) : null}
                     </div>
                   </div>
@@ -302,33 +337,35 @@ function TasksTab({ project, tasks, here }: { project: Project; tasks: Task[]; h
           );
         })}
       </div>
-      <details className="card more">
-        <summary>Add a task</summary>
-        <form action={addTaskAction} className="form" style={{ paddingTop: 8 }}>
-          <Hidden fields={{ project_id: project.id, back: here }} />
-          <div className="form-grid">
-            <label className="tn-field"><span className="tn-label">Task</span><input className="tn-input" name="title" required placeholder="MGPS pressure test" /></label>
-            <label className="tn-field"><span className="tn-label">Phase</span>
-              <select className="tn-input" name="phase" defaultValue="Build">{["Site setup", "Services", "Build", "Finishes", "HVAC", "Handover"].map((p) => <option key={p}>{p}</option>)}</select>
-            </label>
-            <label className="tn-field"><span className="tn-label">Trade</span>
-              <select className="tn-input" name="trade" defaultValue="Civil">{TRADES.map((t) => <option key={t}>{t}</option>)}</select>
-            </label>
-            <label className="tn-field"><span className="tn-label">Zone</span>
-              <select className="tn-input" name="zone" defaultValue="general"><option value="critical">Critical</option><option value="general">General</option></select>
-            </label>
-            <label className="tn-field"><span className="tn-label">Start</span><input className="tn-input" type="date" name="planned_start" required defaultValue={t0} /></label>
-            <label className="tn-field"><span className="tn-label">End</span><input className="tn-input" type="date" name="planned_end" defaultValue={t0} /></label>
-          </div>
-          <span className="tn-help">Tasks you add by hand in two or more projects are suggested for the next one.</span>
-          <div><button className="tn-btn"><Icon name="plus" />Add task</button></div>
-        </form>
-      </details>
+      {perms.manage ? (
+        <details className="card more">
+          <summary>Add a task</summary>
+          <form action={addTaskAction} className="form" style={{ paddingTop: 8 }}>
+            <Hidden fields={{ project_id: project.id, back: here }} />
+            <div className="form-grid">
+              <label className="tn-field"><span className="tn-label">Task</span><input className="tn-input" name="title" required /></label>
+              <label className="tn-field"><span className="tn-label">Phase</span>
+                <select className="tn-input" name="phase" defaultValue={cfg.phases[0]}>{cfg.phases.map((p) => <option key={p}>{p}</option>)}</select>
+              </label>
+              <label className="tn-field"><span className="tn-label">Trade</span>
+                <select className="tn-input" name="trade" defaultValue={cfg.trades[0]}>{cfg.trades.map((t) => <option key={t}>{t}</option>)}</select>
+              </label>
+              <label className="tn-field"><span className="tn-label">Zone</span>
+                <select className="tn-input" name="zone" defaultValue="general"><option value="critical">{cfg.zone_labels.critical}</option><option value="general">{cfg.zone_labels.general}</option></select>
+              </label>
+              <label className="tn-field"><span className="tn-label">Start</span><input className="tn-input" type="date" name="planned_start" required defaultValue={t0} /></label>
+              <label className="tn-field"><span className="tn-label">End</span><input className="tn-input" type="date" name="planned_end" defaultValue={t0} /></label>
+            </div>
+            <span className="tn-help">Tasks you add by hand in two or more projects are suggested for the next one.</span>
+            <div><button className="tn-btn"><Icon name="plus" />Add task</button></div>
+          </form>
+        </details>
+      ) : null}
     </section>
   );
 }
 
-function MaterialsTab({ project, materials, here, head }: { project: Project; materials: Material[]; here: string; head: string }) {
+function MaterialsTab({ project, materials, here, head, cfg, perms }: { project: Project; materials: Material[]; here: string; head: string; cfg: TemplateConfig; perms: Perms }) {
   const t0 = today();
   const rank = (m: Material) => (m.status === "issue" ? 0 : m.status === "to_order" ? 1 : m.status === "ordered" ? 2 : 3);
   const list = [...materials].sort((a, b) => rank(a) - rank(b) || a.order_by.localeCompare(b.order_by));
@@ -352,17 +389,17 @@ function MaterialsTab({ project, materials, here, head }: { project: Project; ma
                   {m.escalated_at && m.status === "to_order" ? <span>· escalated</span> : m.alert_sent_at && m.status === "to_order" ? <span>· alerted {fmtWhen(m.alert_sent_at)}</span> : null}
                   <SourceTag source={m.source} />
                 </span>
-                <MaterialEdit material={m} back={here} />
+                {perms.materials ? <MaterialEdit material={m} back={here} trades={cfg.trades} /> : null}
               </div>
               <div className="rowi__side">
                 <MaterialStatusTag status={m.status} daysToOrder={days} />
-                {m.status === "to_order" || m.status === "issue" ? (
+                {!perms.materials ? null : m.status === "to_order" || m.status === "issue" ? (
                   <form action={materialStatusAction}>
                     <Hidden fields={{ id: m.id, status: "ordered", back: here }} />
                     <button className="tn-btn">{m.status === "issue" ? "Reordered" : "Mark ordered"}</button>
                   </form>
                 ) : null}
-                {m.status === "ordered" ? (
+                {perms.materials && m.status === "ordered" ? (
                   <>
                     <form action={materialStatusAction}>
                       <Hidden fields={{ id: m.id, status: "received", back: here }} />
@@ -374,7 +411,7 @@ function MaterialsTab({ project, materials, here, head }: { project: Project; ma
                     </form>
                   </>
                 ) : null}
-                {m.status === "received" ? (
+                {perms.materials && m.status === "received" ? (
                   <form action={materialStatusAction}>
                     <Hidden fields={{ id: m.id, status: "issue", back: here, note: "Problem found after delivery" }} />
                     <button className="tn-btn tn-btn--quiet">Issue</button>
@@ -385,6 +422,7 @@ function MaterialsTab({ project, materials, here, head }: { project: Project; ma
           );
         })}
       </div>
+      {perms.manage ? (
       <details className="card more">
         <summary>Add a material</summary>
         <form action={addMaterialAction} className="form" style={{ paddingTop: 8 }}>
@@ -392,7 +430,7 @@ function MaterialsTab({ project, materials, here, head }: { project: Project; ma
           <div className="form-grid">
             <label className="tn-field"><span className="tn-label">Item</span><input className="tn-input" name="item" required placeholder="Pass box, SS" /></label>
             <label className="tn-field"><span className="tn-label">Trade</span>
-              <select className="tn-input" name="trade" defaultValue="Civil">{TRADES.map((t) => <option key={t}>{t}</option>)}</select>
+              <select className="tn-input" name="trade" defaultValue={cfg.trades[0]}>{cfg.trades.map((t) => <option key={t}>{t}</option>)}</select>
             </label>
             <label className="tn-field"><span className="tn-label">Quantity</span><input className="tn-input" name="qty" inputMode="numeric" /></label>
             <label className="tn-field"><span className="tn-label">Unit</span><input className="tn-input" name="unit" placeholder="pcs" /></label>
@@ -402,6 +440,7 @@ function MaterialsTab({ project, materials, here, head }: { project: Project; ma
           <div><button className="tn-btn"><Icon name="plus" />Add material</button></div>
         </form>
       </details>
+      ) : null}
     </section>
   );
 }

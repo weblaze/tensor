@@ -26,6 +26,9 @@ export interface Person {
   current_project_id: string | null;
   is_demo: boolean;
   created_at: string;
+  username?: string | null;
+  pass_set_at?: string | null;
+  last_login_at?: string | null;
 }
 
 export interface Template {
@@ -33,6 +36,11 @@ export interface Template {
   name: string;
   description: string | null;
   default_days: number;
+  phases?: unknown;
+  task_statuses?: unknown;
+  trades?: unknown;
+  zone_labels?: unknown;
+  project_fields?: unknown;
 }
 
 export interface TemplateTask {
@@ -74,6 +82,11 @@ export interface Project {
   report_token: string;
   last_report_sent_on: string | null;
   created_at: string;
+  task_statuses?: unknown;
+  trades?: unknown;
+  zone_labels?: unknown;
+  project_fields?: unknown;
+  details?: Record<string, string> | null;
 }
 
 export interface Task {
@@ -89,6 +102,7 @@ export interface Task {
   done_at: string | null;
   source: Source;
   sort: number;
+  status_label?: string | null;
 }
 
 export interface Material {

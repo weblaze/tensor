@@ -1,4 +1,7 @@
 import { db } from "@/lib/db";
+import { requirePage, MANAGERS } from "@/lib/auth";
+import { fmtWhen } from "@/lib/dates";
+import { LoginPanel } from "./LoginPanel";
 import { channel } from "@/lib/messaging";
 import { ROLES, type Person, type Project, type Role } from "@/lib/types";
 import { Flash, StatusTag } from "@/components/ui";
@@ -17,6 +20,7 @@ const ROLE_WORD: Record<Role, string> = {
 };
 
 export default async function PeoplePage({ searchParams }: { searchParams: Promise<{ msg?: string; edit?: string }> }) {
+  await requirePage(...MANAGERS);
   const { msg, edit } = await searchParams;
   const sb = db();
   const [pr, prj] = await Promise.all([
@@ -63,6 +67,7 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
                         </span>
                         <span className="rowi__meta">
                           {p.telegram_chat_id ? <StatusTag>Linked</StatusTag> : <StatusTag tone="attention" icon="phone">Not linked</StatusTag>}
+                          {(p as Person & { pass_hash?: string | null }).pass_hash ? <span>· web login <span className="tn-data">{p.username}</span></span> : null}
                           <span>Code <span className="tn-data">{p.link_code}</span></span>
                           {p.phone ? <span className="tn-data">· {p.phone}</span> : null}
                           {cur ? <span>· reporting for {cur.city}</span> : null}
@@ -126,6 +131,17 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
               <label className="check"><input type="checkbox" name="confirm" /><span>Yes, remove {editing.name}</span></label>
               <button className="tn-btn tn-btn--quiet">Remove</button>
             </form>
+          ) : null}
+          {editing ? (
+            <LoginPanel
+              key={editing.id}
+              id={editing.id}
+              name={editing.name}
+              username={editing.username ?? null}
+              hasLogin={!!(editing as Person & { pass_hash?: string | null }).pass_hash}
+              lastLogin={editing.last_login_at ? fmtWhen(editing.last_login_at) : null}
+              linked={!!editing.telegram_chat_id}
+            />
           ) : null}
         </aside>
       </div>

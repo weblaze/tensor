@@ -50,9 +50,9 @@ export async function setMaterialStatus(id: string, status: MaterialStatus, note
   return must(await db().from("materials").update(patch).eq("id", id).select("*").single(), "update material") as Material;
 }
 
-export async function setTaskStatus(id: string, status: "todo" | "doing" | "done" | "blocked"): Promise<void> {
+export async function setTaskStatus(id: string, status: "todo" | "doing" | "done" | "blocked", label: string | null = null): Promise<void> {
   must(
-    await db().from("tasks").update({ status, done_at: status === "done" ? new Date().toISOString() : null }).eq("id", id),
+    await db().from("tasks").update({ status, status_label: label, done_at: status === "done" ? new Date().toISOString() : null }).eq("id", id),
     "update task",
   );
 }
@@ -108,6 +108,8 @@ export interface ApproveInput {
   zone?: Zone | null;
   applySuggestedAction?: boolean;
   auto?: boolean;
+  /** Person who approved; null for the shared office login or autopilot. */
+  reviewedBy?: string | null;
 }
 
 /** Approve: save the coordinator's choices, apply the action, notify procurement/head now. Doctor items wait for the nightly report. */
@@ -120,6 +122,7 @@ export async function approveUpdate(id: string, input: ApproveInput): Promise<{ 
     final_routes: routes,
     reviewed_at: new Date().toISOString(),
     auto_routed: !!input.auto,
+    reviewed_by: input.reviewedBy ?? null,
   };
   if (input.note !== undefined && input.note.trim()) patch.note = input.note.trim();
   if (input.trade !== undefined) patch.trade = input.trade || null;
@@ -145,8 +148,8 @@ export async function approveUpdate(id: string, input: ApproveInput): Promise<{ 
   return { action: actionLine, notified };
 }
 
-export async function holdUpdate(id: string): Promise<void> {
-  must(await db().from("updates").update({ status: "held", reviewed_at: new Date().toISOString() }).eq("id", id), "hold update");
+export async function holdUpdate(id: string, reviewedBy: string | null = null): Promise<void> {
+  must(await db().from("updates").update({ status: "held", reviewed_at: new Date().toISOString(), reviewed_by: reviewedBy }).eq("id", id), "hold update");
 }
 
 export async function reopenUpdate(id: string): Promise<void> {

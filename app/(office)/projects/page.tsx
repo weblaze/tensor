@@ -1,3 +1,4 @@
+import { MANAGERS, requirePage } from "@/lib/auth";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { fmtDate, plural, today } from "@/lib/dates";
@@ -9,6 +10,7 @@ import { Icon } from "@/components/Icon";
 export const metadata = { title: "Projects" };
 
 export default async function ProjectsPage({ searchParams }: { searchParams: Promise<{ msg?: string }> }) {
+  await requirePage(...MANAGERS);
   const { msg } = await searchParams;
   const sb = db();
   const [pr, tr, pe] = await Promise.all([

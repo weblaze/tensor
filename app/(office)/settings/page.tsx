@@ -1,3 +1,4 @@
+import { MANAGERS, requirePage } from "@/lib/auth";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { demoMode, headName } from "@/lib/config";
@@ -27,6 +28,7 @@ const KIND_WORD: Record<string, string> = {
 };
 
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ msg?: string }> }) {
+  await requirePage(...MANAGERS);
   const { msg } = await searchParams;
   const sb = db();
   const [ap, meter, nr, pr, head] = await Promise.all([

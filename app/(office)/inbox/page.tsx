@@ -1,3 +1,4 @@
+import { MANAGERS, requirePage } from "@/lib/auth";
 import Link from "next/link";
 import { db, signedUrls } from "@/lib/db";
 import { fmtShort, fmtTime, fmtWhen, istDate, plural } from "@/lib/dates";
@@ -39,6 +40,7 @@ async function actionLabels(updates: Update[]): Promise<Map<string, string>> {
 }
 
 export default async function InboxPage({ searchParams }: { searchParams: Promise<{ msg?: string }> }) {
+  await requirePage(...MANAGERS);
   const { msg } = await searchParams;
   const sb = db();
   const [pendingRes, reviewedRes, projRes, peopleRes, meter, autopilot, head] = await Promise.all([

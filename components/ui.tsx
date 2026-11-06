@@ -24,11 +24,11 @@ export function TradeTag({ trade }: { trade: string | null }) {
   return <span className="tn-tag tn-tag--trade">{trade}</span>;
 }
 
-export function ZoneTag({ zone, room }: { zone: Zone | null; room?: string }) {
+export function ZoneTag({ zone, room, label }: { zone: Zone | null; room?: string; label?: string }) {
   if (!zone) return null;
   return (
     <span className={`tn-zone tn-zone--${zone}`}>
-      {zone === "critical" ? "Critical" : "General"}
+      {label ?? (zone === "critical" ? "Critical" : "General")}
       {room ? ` · ${room}` : ""}
     </span>
   );

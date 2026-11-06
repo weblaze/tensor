@@ -1,3 +1,4 @@
+import { MANAGERS, requirePage } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { addDays, today } from "@/lib/dates";
 import { listTemplates } from "@/lib/planner";
@@ -8,6 +9,7 @@ import { Planner } from "./Planner";
 export const metadata = { title: "New project" };
 
 export default async function NewProjectPage() {
+  await requirePage(...MANAGERS);
   const [templates, peopleRes] = await Promise.all([listTemplates(), db().from("people").select("*").order("name")]);
   const people = (peopleRes.data ?? []) as Person[];
   const pick = (role: Person["role"]) => people.filter((p) => p.role === role).map((p) => ({ id: p.id, name: p.name }));

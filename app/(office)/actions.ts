@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireOffice } from "@/lib/auth";
+import { MANAGERS, requireOffice, requireRole } from "@/lib/auth";
 import { demoMode, headName, newLinkCode } from "@/lib/config";
 import { db, must } from "@/lib/db";
 import { fmtShort } from "@/lib/dates";
@@ -35,7 +35,7 @@ function refreshAll() {
 export interface ReviewResult { ok: boolean; message: string }
 
 export async function approveUpdateAction(form: FormData): Promise<ReviewResult> {
-  await requireOffice();
+  const viewer = await requireOffice();
   const id = str(form, "id");
   const routes = form.getAll("routes").map(String).filter((r): r is RouteTarget => (ROUTES as string[]).includes(r));
   try {
@@ -45,6 +45,7 @@ export async function approveUpdateAction(form: FormData): Promise<ReviewResult>
       trade: form.has("trade") ? str(form, "trade") || null : undefined,
       zone: form.has("zone") ? ((str(form, "zone") || null) as Zone | null) : undefined,
       applySuggestedAction: form.get("apply_action") !== "off",
+      reviewedBy: viewer.person?.id ?? null,
     });
     refreshAll();
     const WHO: Record<RouteTarget, string> = { doctor: "the doctor", procurement: "procurement", head: await headName() };
@@ -62,9 +63,9 @@ export async function approveUpdateAction(form: FormData): Promise<ReviewResult>
 }
 
 export async function holdUpdateAction(form: FormData): Promise<ReviewResult> {
-  await requireOffice();
+  const viewer = await requireOffice();
   try {
-    await holdUpdate(str(form, "id"));
+    await holdUpdate(str(form, "id"), viewer.person?.id ?? null);
     refreshAll();
     return { ok: true, message: "Held. It stays out of every report until you reopen it." };
   } catch (e) {
@@ -97,7 +98,7 @@ export async function fileUpdateAction(form: FormData): Promise<ReviewResult> {
 // ---------- Materials and tasks ----------
 
 export async function materialStatusAction(form: FormData) {
-  await requireOffice();
+  await requireRole(...MANAGERS, "procurement");
   const status = str(form, "status") as MaterialStatus;
   if (!["to_order", "ordered", "received", "issue"].includes(status)) throw new Error("Bad status");
   const note = form.has("note") ? str(form, "note") || null : undefined;
@@ -115,10 +116,16 @@ export async function materialStatusAction(form: FormData) {
 }
 
 export async function taskStatusAction(form: FormData) {
-  await requireOffice();
+  const viewer = await requireRole(...MANAGERS, "supervisor");
   const status = str(form, "status") as TaskStatus;
   if (!["todo", "doing", "done", "blocked"].includes(status)) throw new Error("Bad status");
-  await setTaskStatus(str(form, "id"), status);
+  if (viewer.role === "supervisor") {
+    // Supervisors change tasks on their own sites only.
+    const { data } = await db().from("tasks").select("projects!inner(supervisor_id)").eq("id", str(form, "id")).single();
+    const owner = (data as unknown as { projects: { supervisor_id: string | null } } | null)?.projects.supervisor_id;
+    if (owner !== viewer.person?.id) throw new Error("That task is on someone else's site");
+  }
+  await setTaskStatus(str(form, "id"), status, str(form, "label") || null);
   refreshAll();
   redirect(back(form, "/projects"));
 }
@@ -345,6 +352,15 @@ export async function resetDemoAction(form: FormData) {
 
 // ---------- Editing ----------
 
+/** Project detail fields (from the template) arrive as detail_<key>. */
+function detailsFrom(form: FormData): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of form.entries()) {
+    if (k.startsWith("detail_") && typeof v === "string" && v.trim()) out[k.slice(7)] = v.trim().slice(0, 300);
+  }
+  return out;
+}
+
 function isoDate(s: string): string | null {
   return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
 }
@@ -377,7 +393,7 @@ export async function deleteTaskAction(form: FormData) {
 }
 
 export async function updateMaterialAction(form: FormData) {
-  await requireOffice();
+  await requireRole(...MANAGERS, "procurement");
   const id = str(form, "id");
   const item = str(form, "item");
   const needBy = isoDate(str(form, "need_by"));
@@ -423,6 +439,7 @@ export async function updateProjectAction(form: FormData) {
     supervisor_id: str(form, "supervisor_id") || null,
     coordinator_id: str(form, "coordinator_id") || null,
     order_notes: str(form, "order_notes") || null,
+    details: detailsFrom(form),
   }).eq("id", id), "update project");
 
   // Moving the start can move the whole plan with it.

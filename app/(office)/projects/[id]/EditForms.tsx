@@ -1,10 +1,10 @@
-import { TRADES, type Material, type Person, type Project, type Task } from "@/lib/types";
+import { type Material, type Person, type Project, type Task } from "@/lib/types";
+import { DEFAULT_CONFIG, type ProjectFieldDef, type ZoneLabels } from "@/lib/templateConfig";
 import { Icon } from "@/components/Icon";
 import {
   deleteMaterialAction, deleteTaskAction, updateMaterialAction, updateProjectAction, updateTaskAction,
 } from "../../actions";
 
-const PHASES = ["Site setup", "Services", "Build", "Finishes", "HVAC", "Handover"];
 
 function Hidden({ fields }: { fields: Record<string, string> }) {
   return <>{Object.entries(fields).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}</>;
@@ -21,7 +21,7 @@ function DeleteForm({ action, id, back, label }: { action: (f: FormData) => Prom
   );
 }
 
-export function TaskEdit({ task, back }: { task: Task; back: string }) {
+export function TaskEdit({ task, back, phases = DEFAULT_CONFIG.phases, trades = DEFAULT_CONFIG.trades, zoneLabels = DEFAULT_CONFIG.zone_labels }: { task: Task; back: string; phases?: string[]; trades?: string[]; zoneLabels?: ZoneLabels }) {
   return (
     <details className="more">
       <summary>Edit</summary>
@@ -31,13 +31,13 @@ export function TaskEdit({ task, back }: { task: Task; back: string }) {
           <div className="form-grid">
             <label className="tn-field"><span className="tn-label">Task</span><input className="tn-input" name="title" required defaultValue={task.title} /></label>
             <label className="tn-field"><span className="tn-label">Phase</span>
-              <select className="tn-input" name="phase" defaultValue={task.phase}>{[...new Set([...PHASES, task.phase])].map((p) => <option key={p}>{p}</option>)}</select>
+              <select className="tn-input" name="phase" defaultValue={task.phase}>{[...new Set([...phases, task.phase])].map((p) => <option key={p}>{p}</option>)}</select>
             </label>
             <label className="tn-field"><span className="tn-label">Trade</span>
-              <select className="tn-input" name="trade" defaultValue={task.trade}>{[...new Set([...TRADES, task.trade])].map((t) => <option key={t}>{t}</option>)}</select>
+              <select className="tn-input" name="trade" defaultValue={task.trade}>{[...new Set([...trades, task.trade])].map((t) => <option key={t}>{t}</option>)}</select>
             </label>
             <label className="tn-field"><span className="tn-label">Zone</span>
-              <select className="tn-input" name="zone" defaultValue={task.zone}><option value="critical">Critical</option><option value="general">General</option></select>
+              <select className="tn-input" name="zone" defaultValue={task.zone}><option value="critical">{zoneLabels.critical}</option><option value="general">{zoneLabels.general}</option></select>
             </label>
             <label className="tn-field"><span className="tn-label">Start</span><input className="tn-input" type="date" name="planned_start" required defaultValue={task.planned_start} /></label>
             <label className="tn-field"><span className="tn-label">End</span><input className="tn-input" type="date" name="planned_end" required defaultValue={task.planned_end} /></label>
@@ -50,7 +50,7 @@ export function TaskEdit({ task, back }: { task: Task; back: string }) {
   );
 }
 
-export function MaterialEdit({ material: m, back }: { material: Material; back: string }) {
+export function MaterialEdit({ material: m, back, trades = DEFAULT_CONFIG.trades }: { material: Material; back: string; trades?: string[] }) {
   return (
     <details className="more">
       <summary>Edit</summary>
@@ -60,7 +60,7 @@ export function MaterialEdit({ material: m, back }: { material: Material; back: 
           <div className="form-grid">
             <label className="tn-field"><span className="tn-label">Item</span><input className="tn-input" name="item" required defaultValue={m.item} /></label>
             <label className="tn-field"><span className="tn-label">Trade</span>
-              <select className="tn-input" name="trade" defaultValue={m.trade}>{[...new Set([...TRADES, m.trade])].map((t) => <option key={t}>{t}</option>)}</select>
+              <select className="tn-input" name="trade" defaultValue={m.trade}>{[...new Set([...trades, m.trade])].map((t) => <option key={t}>{t}</option>)}</select>
             </label>
             <label className="tn-field"><span className="tn-label">Quantity</span><input className="tn-input" name="qty" inputMode="decimal" defaultValue={m.qty ?? ""} /></label>
             <label className="tn-field"><span className="tn-label">Unit</span><input className="tn-input" name="unit" defaultValue={m.unit ?? ""} /></label>
@@ -78,7 +78,7 @@ export function MaterialEdit({ material: m, back }: { material: Material; back: 
   );
 }
 
-export function ProjectEdit({ project: p, people, back }: { project: Project; people: Person[]; back: string }) {
+export function ProjectEdit({ project: p, people, back, fields = [] }: { project: Project; people: Person[]; back: string; fields?: ProjectFieldDef[] }) {
   const pick = (role: Person["role"]) => people.filter((x) => x.role === role);
   const select = (name: string, role: Person["role"], value: string | null) => (
     <select className="tn-input" name={name} defaultValue={value ?? ""}>
@@ -99,6 +99,19 @@ export function ProjectEdit({ project: p, people, back }: { project: Project; pe
         <label className="tn-field"><span className="tn-label">Start date</span><input className="tn-input" type="date" name="start_date" required defaultValue={p.start_date} /></label>
         <label className="check"><input type="checkbox" name="shift_plan" defaultChecked /><span>If the start moves, move open tasks and unordered materials with it</span></label>
         <label className="tn-field"><span className="tn-label">Planned days</span><input className="tn-input" name="planned_days" inputMode="numeric" defaultValue={p.planned_days} /></label>
+        {fields.map((f) => (
+          <label key={f.key} className="tn-field">
+            <span className="tn-label">{f.label}{f.required ? "" : " (optional)"}</span>
+            {f.kind === "person" ? (
+              <select className="tn-input" name={`detail_${f.key}`} defaultValue={p.details?.[f.key] ?? ""} required={f.required}>
+                <option value="">Not set</option>
+                {people.map((x) => <option key={x.id} value={x.name}>{x.name}</option>)}
+              </select>
+            ) : (
+              <input className="tn-input" name={`detail_${f.key}`} type={f.kind === "date" ? "date" : f.kind === "phone" ? "tel" : "text"} defaultValue={p.details?.[f.key] ?? ""} required={f.required} />
+            )}
+          </label>
+        ))}
         <label className="tn-field"><span className="tn-label">Order notes</span><textarea className="tn-input" name="order_notes" defaultValue={p.order_notes ?? ""} /></label>
         <div><button className="tn-btn"><Icon name="check" />Save project</button></div>
       </form>
