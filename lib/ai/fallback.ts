@@ -59,6 +59,8 @@ const HINGLISH: [RegExp, string][] = [
   [/\b((?:\w+\s+)?floor|site|ot|lab|reception|wall|ceiling)\s+mein\b/gi, "in $1"],
   [/\b(pe|par)\b/gi, "on"],
   [/\blaga diya\b|\blag gaya\b|\blag gaye\b/gi, "installed"],
+  // Left-over "is/are" after the phrases above ("2 toote hain" → "2 broken").
+  [/\s+\b(hai|hain|he)\b/gi, ""],
   [/\btoot gaye\b|\btoot gaya\b|\btoote\b|\btoota\b/gi, "broken"],
   [/\bkharab\b/gi, "damaged"],
   [/\baadmi\b/gi, "men"],

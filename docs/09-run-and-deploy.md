@@ -81,9 +81,9 @@ The bundle is about 1.3 MB gzipped, under the 3 MB Workers free limit.
 
 2. Schedule the hourly checks with Supabase `pg_cron` + `pg_net`. Run once in the Supabase SQL editor, with the real URL and `CRON_SECRET`:
 
+   Production is already set up (job `tensor-hourly`). For a new environment, after the `cron_extensions` and `advisor_fixes` migrations:
+
    ```sql
-   create extension if not exists pg_cron;
-   create extension if not exists pg_net;
    select vault.create_secret('<CRON_SECRET>', 'tensor_cron_secret');
 
    select cron.schedule('tensor-hourly', '5 * * * *', $$
@@ -93,7 +93,8 @@ The bundle is about 1.3 MB gzipped, under the 3 MB Workers free limit.
          'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'tensor_cron_secret'),
          'Content-Type', 'application/json'
        ),
-       body := '{}'::jsonb
+       body := '{}'::jsonb,
+       timeout_milliseconds := 30000
      );
    $$);
    ```
