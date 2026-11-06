@@ -4,14 +4,14 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { phaseRank } from "@/lib/planner";
 import { configOf } from "@/lib/templateConfig";
-import { TRADES, type Template, type TemplateMaterial, type TemplateTask } from "@/lib/types";
+import { type Template, type TemplateMaterial, type TemplateTask } from "@/lib/types";
+import type { TemplateConfig } from "@/lib/templateConfig";
 import { Flash, TradeTag, ZoneTag } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import {
   deleteTemplateAction, deleteTemplateRowAction, saveTemplateMaterialAction, saveTemplateTaskAction, updateTemplateAction,
 } from "../actions";
 
-const PHASES = ["Site setup", "Services", "Build", "Finishes", "HVAC", "Handover"];
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -19,18 +19,18 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return { title: data?.name ?? "Template" };
 }
 
-function TaskFields({ t }: { t?: TemplateTask }) {
+function TaskFields({ t, cfg }: { t?: TemplateTask; cfg: TemplateConfig }) {
   return (
     <div className="form-grid">
       <label className="tn-field"><span className="tn-label">Task</span><input className="tn-input" name="title" required defaultValue={t?.title} placeholder="MGPS pressure test" /></label>
       <label className="tn-field"><span className="tn-label">Phase</span>
-        <select className="tn-input" name="phase" defaultValue={t?.phase ?? "Build"}>{[...new Set([...PHASES, t?.phase ?? "Build"])].map((p) => <option key={p}>{p}</option>)}</select>
+        <select className="tn-input" name="phase" defaultValue={t?.phase ?? cfg.phases[0]}>{[...new Set([...cfg.phases, t?.phase ?? cfg.phases[0]])].map((p) => <option key={p}>{p}</option>)}</select>
       </label>
       <label className="tn-field"><span className="tn-label">Trade</span>
-        <select className="tn-input" name="trade" defaultValue={t?.trade ?? "Civil"}>{[...new Set([...TRADES, t?.trade ?? "Civil"])].map((x) => <option key={x}>{x}</option>)}</select>
+        <select className="tn-input" name="trade" defaultValue={t?.trade ?? cfg.trades[0]}>{[...new Set([...cfg.trades, t?.trade ?? cfg.trades[0]])].map((x) => <option key={x}>{x}</option>)}</select>
       </label>
       <label className="tn-field"><span className="tn-label">Zone</span>
-        <select className="tn-input" name="zone" defaultValue={t?.zone ?? "general"}><option value="critical">Critical</option><option value="general">General</option></select>
+        <select className="tn-input" name="zone" defaultValue={t?.zone ?? "general"}><option value="critical">{cfg.zone_labels.critical}</option><option value="general">{cfg.zone_labels.general}</option></select>
       </label>
       <label className="tn-field"><span className="tn-label">Starts on day</span><input className="tn-input" name="start_day" inputMode="numeric" defaultValue={t ? t.start_day + 1 : 1} /><span className="tn-help">Day 1 is the project start</span></label>
       <label className="tn-field"><span className="tn-label">Days</span><input className="tn-input" name="duration_days" inputMode="numeric" defaultValue={t?.duration_days ?? 1} /></label>
@@ -38,12 +38,12 @@ function TaskFields({ t }: { t?: TemplateTask }) {
   );
 }
 
-function MaterialFields({ m }: { m?: TemplateMaterial }) {
+function MaterialFields({ m, cfg }: { m?: TemplateMaterial; cfg: TemplateConfig }) {
   return (
     <div className="form-grid">
       <label className="tn-field"><span className="tn-label">Item</span><input className="tn-input" name="item" required defaultValue={m?.item} placeholder="Pass box, SS" /></label>
       <label className="tn-field"><span className="tn-label">Trade</span>
-        <select className="tn-input" name="trade" defaultValue={m?.trade ?? "Civil"}>{[...new Set([...TRADES, m?.trade ?? "Civil"])].map((x) => <option key={x}>{x}</option>)}</select>
+        <select className="tn-input" name="trade" defaultValue={m?.trade ?? cfg.trades[0]}>{[...new Set([...cfg.trades, m?.trade ?? cfg.trades[0]])].map((x) => <option key={x}>{x}</option>)}</select>
       </label>
       <label className="tn-field"><span className="tn-label">Quantity</span><input className="tn-input" name="qty" inputMode="decimal" defaultValue={m?.qty ?? ""} /></label>
       <label className="tn-field"><span className="tn-label">Unit</span><input className="tn-input" name="unit" defaultValue={m?.unit ?? ""} /></label>
@@ -82,6 +82,7 @@ export default async function TemplatePage({ params, searchParams }: { params: P
   const materials = (tm.data ?? []) as TemplateMaterial[];
   const phases = [...new Set(tasks.map((t) => t.phase))];
   const hidden = <input type="hidden" name="template_id" value={id} />;
+  const cfg = configOf(template);
 
   return (
     <main className="page">
@@ -96,7 +97,18 @@ export default async function TemplatePage({ params, searchParams }: { params: P
               <h1 className="tn-title">{template.name}</h1>
               {template.description ? <p className="tn-muted">{template.description}</p> : null}
             </div>
+            <div className="tn-row">
+              <Link href={`/settings/templates/new?edit=${id}`} className="tn-btn"><Icon name="settings" />Edit setup</Link>
+              <Link href={`/projects/new?template=${id}`} className="tn-btn tn-btn--primary"><Icon name="plus" />Plan a project</Link>
+            </div>
           </div>
+          <dl className="kv card">
+            <dt>Phases</dt><dd>{cfg.phases.join(" → ")}</dd>
+            <dt>Statuses</dt><dd>{cfg.task_statuses.map((s) => s.label).join(" · ")}</dd>
+            <dt>Zones</dt><dd>{cfg.zone_labels.critical} · {cfg.zone_labels.general}</dd>
+            <dt>Trades</dt><dd>{cfg.trades.join(", ")}</dd>
+            <dt>Project details</dt><dd>{cfg.project_fields.length ? cfg.project_fields.map((f) => `${f.label}${f.required ? " (required)" : ""}`).join(", ") : "None"}</dd>
+          </dl>
 
           <h2 className="tn-heading">Tasks</h2>
           <div className="rows">
@@ -109,7 +121,7 @@ export default async function TemplatePage({ params, searchParams }: { params: P
                       <span className="rowi__title">{t.title}</span>
                       <span className="rowi__meta">
                         <TradeTag trade={t.trade} />
-                        <ZoneTag zone={t.zone} />
+                        <ZoneTag zone={t.zone} label={cfg.zone_labels[t.zone]} />
                         <span className="tn-data">Day {t.start_day + 1}{t.duration_days > 1 ? `–${t.start_day + t.duration_days}` : ""}</span>
                       </span>
                       <details className="more">
@@ -117,7 +129,7 @@ export default async function TemplatePage({ params, searchParams }: { params: P
                         <div className="stack-4" style={{ paddingTop: 8 }}>
                           <form action={saveTemplateTaskAction} className="form">
                             {hidden}<input type="hidden" name="id" value={t.id} />
-                            <TaskFields t={t} />
+                            <TaskFields t={t} cfg={cfg} />
                             <div><button className="tn-btn"><Icon name="check" />Save task</button></div>
                           </form>
                           <RemoveRow templateId={id} id={t.id} kind="task" />
@@ -134,7 +146,7 @@ export default async function TemplatePage({ params, searchParams }: { params: P
             <summary>Add a task</summary>
             <form action={saveTemplateTaskAction} className="form" style={{ paddingTop: 8 }}>
               {hidden}
-              <TaskFields />
+              <TaskFields cfg={cfg} />
               <div><button className="tn-btn"><Icon name="plus" />Add task</button></div>
             </form>
           </details>
@@ -156,7 +168,7 @@ export default async function TemplatePage({ params, searchParams }: { params: P
                     <div className="stack-4" style={{ paddingTop: 8 }}>
                       <form action={saveTemplateMaterialAction} className="form">
                         {hidden}<input type="hidden" name="id" value={m.id} />
-                        <MaterialFields m={m} />
+                        <MaterialFields m={m} cfg={cfg} />
                         <div><button className="tn-btn"><Icon name="check" />Save material</button></div>
                       </form>
                       <RemoveRow templateId={id} id={m.id} kind="material" />
@@ -171,7 +183,7 @@ export default async function TemplatePage({ params, searchParams }: { params: P
             <summary>Add a material</summary>
             <form action={saveTemplateMaterialAction} className="form" style={{ paddingTop: 8 }}>
               {hidden}
-              <MaterialFields />
+              <MaterialFields cfg={cfg} />
               <div><button className="tn-btn"><Icon name="plus" />Add material</button></div>
             </form>
           </details>

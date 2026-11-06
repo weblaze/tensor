@@ -11,8 +11,9 @@ import { Planner } from "./Planner";
 
 export const metadata = { title: "New project" };
 
-export default async function NewProjectPage() {
+export default async function NewProjectPage({ searchParams }: { searchParams: Promise<{ template?: string }> }) {
   await requirePage(...MANAGERS);
+  const { template: wanted } = await searchParams;
   const [templates, peopleRes] = await Promise.all([listTemplates(), db().from("people").select("id, name, role").order("name")]);
   const people = (peopleRes.data ?? []) as Pick<Person, "id" | "name" | "role">[];
   const pick = (role: Person["role"]) => people.filter((p) => p.role === role).map((p) => ({ id: p.id, name: p.name }));
@@ -48,6 +49,7 @@ export default async function NewProjectPage() {
       <Planner
         templates={templates.map((t) => ({ id: t.id, name: t.name, days: t.default_days, description: t.description, fields: configOf(t).project_fields }))}
         people={people.map((p) => ({ id: p.id, name: p.name }))}
+        initialTemplateId={templates.some((t) => t.id === wanted) ? wanted : undefined}
         doctors={pick("doctor")}
         supervisors={pick("supervisor")}
         coordinators={pick("coordinator")}

@@ -60,8 +60,8 @@ export default async function OfficeLayout({ children }: { children: React.React
             {demoMode() ? <span className="demo-flag" title="Demo deployment with sample data">Demo</span> : null}
             {viewer ? (
               <Link href="/me" className="tn-btn tn-btn--quiet hide-sm" title="Your account">
-                {viewer.name}
-                <span className="tn-caption">· {ROLE_WORD[viewer.role]}</span>
+                {viewer.person ? viewer.name : "Office login"}
+                {viewer.person ? <span className="tn-caption">· {ROLE_WORD[viewer.role]}</span> : null}
               </Link>
             ) : null}
             <form action={logout}>

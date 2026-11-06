@@ -107,7 +107,7 @@ function ListEditor({ values, onChange, suggestions, placeholder, label }: { val
       </label>
       <div className="rows">
         {values.map((v, i) => (
-          <div key={i} className="rowi" style={{ gridTemplateColumns: "auto minmax(0,1fr) auto" }}>
+          <div key={i} className="rowi wiz-row wiz-row--list">
             <span className="tn-data tn-muted">{i + 1}</span>
             <input className="tn-input" value={v} placeholder={placeholder} onChange={(e) => set(i, e.target.value)} aria-label={`${label} ${i + 1}`} />
             <span className="rowi__side">
@@ -146,10 +146,11 @@ function validate(step: number, d: Data): string | null {
   return null;
 }
 
-export function Wizard({ tutorial: tutorialDefault, initialName }: { tutorial: boolean; initialName: string }) {
+export function Wizard({ tutorial: tutorialDefault, initialName, templateId, initial }: { tutorial: boolean; initialName: string; templateId?: string; initial?: Data }) {
+  const draftKey = `${DRAFT_KEY}.${templateId ?? "new"}`;
   const [step, setStep] = useState(0);
   const [tutorial, setTutorial] = useState(tutorialDefault);
-  const [d, setD] = useState<Data>({ ...EMPTY, name: initialName });
+  const [d, setD] = useState<Data>(initial ?? { ...EMPTY, name: initialName });
   const [error, setError] = useState<string | null>(null);
   const [saving, start] = useTransition();
   const [restored, setRestored] = useState(false);
@@ -157,7 +158,7 @@ export function Wizard({ tutorial: tutorialDefault, initialName }: { tutorial: b
   // Keep a draft in this browser so a closed tab doesn't lose the work.
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(DRAFT_KEY);
+      const raw = localStorage.getItem(draftKey);
       if (raw && !initialName) {
         const saved = JSON.parse(raw) as { d: Data; step: number };
         setD(saved.d);
@@ -165,10 +166,10 @@ export function Wizard({ tutorial: tutorialDefault, initialName }: { tutorial: b
         setRestored(true);
       }
     } catch { /* storage blocked: start fresh */ }
-  }, [initialName]);
+  }, [initialName, draftKey]);
   useEffect(() => {
-    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ d, step })); } catch { /* ignore */ }
-  }, [d, step]);
+    try { localStorage.setItem(draftKey, JSON.stringify({ d, step })); } catch { /* ignore */ }
+  }, [d, step, draftKey]);
 
   const s = STEPS[step];
   const patch = (p: Partial<Data>) => setD((x) => ({ ...x, ...p }));
@@ -214,14 +215,14 @@ export function Wizard({ tutorial: tutorialDefault, initialName }: { tutorial: b
     }
     setError(null);
     start(async () => {
-      try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+      try { localStorage.removeItem(draftKey); } catch { /* ignore */ }
       const res = await createTemplateFromWizardAction({
         ...d,
         phases,
         trades,
         statuses: d.statuses.filter((x) => x.label.trim()),
         fields: d.fields.filter((f) => f.label.trim()),
-      });
+      }, templateId);
       if (res && "error" in res) setError(res.error);
     });
   }
@@ -247,7 +248,7 @@ export function Wizard({ tutorial: tutorialDefault, initialName }: { tutorial: b
             <ul style={{ margin: 0, paddingLeft: 20 }}>{s.tips.map((t) => <li key={t} className="tn-muted">{t}</li>)}</ul>
           </div>
         ) : null}
-        {restored && step > 0 ? <p className="tn-caption">Picked up where you left off. <button type="button" className="tn-btn tn-btn--quiet" onClick={() => { setD(EMPTY); setStep(0); setRestored(false); }}>Start over</button></p> : null}
+        {restored && step > 0 ? <p className="tn-caption">Picked up where you left off. <button type="button" className="tn-btn tn-btn--quiet" onClick={() => { setD(initial ?? EMPTY); setStep(0); setRestored(false); }}>Start over</button></p> : null}
       </div>
 
       <section className="card stack-4">
@@ -277,7 +278,7 @@ export function Wizard({ tutorial: tutorialDefault, initialName }: { tutorial: b
             </label>
             <div className="rows">
               {d.statuses.map((st, i) => (
-                <div key={i} className="rowi" style={{ gridTemplateColumns: "auto minmax(0,1fr) minmax(0,1fr) auto" }}>
+                <div key={i} className="rowi wiz-row wiz-row--status">
                   <span className="tn-data tn-muted">{i + 1}</span>
                   <input className="tn-input" value={st.label} placeholder="What your team calls it" aria-label={`Status ${i + 1} name`} onChange={(e) => patch({ statuses: d.statuses.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)) })} />
                   <select className="tn-input" value={st.kind} aria-label={`Status ${i + 1} meaning`} onChange={(e) => patch({ statuses: d.statuses.map((x, j) => (j === i ? { ...x, kind: e.target.value as StatusKind } : x)) })}>
@@ -309,7 +310,7 @@ export function Wizard({ tutorial: tutorialDefault, initialName }: { tutorial: b
             </div>
             <div className="rows">
               {d.fields.length === 0 ? <div className="empty">No extra details. Projects will only ask for name, city, people and dates.</div> : d.fields.map((f, i) => (
-                <div key={i} className="rowi" style={{ gridTemplateColumns: "minmax(0,2fr) minmax(0,1fr) auto auto" }}>
+                <div key={i} className="rowi wiz-row wiz-row--field">
                   <input className="tn-input" value={f.label} placeholder="Detail name" aria-label={`Detail ${i + 1}`} onChange={(e) => patch({ fields: d.fields.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)) })} />
                   <select className="tn-input" value={f.kind} aria-label="Kind" onChange={(e) => patch({ fields: d.fields.map((x, j) => (j === i ? { ...x, kind: e.target.value as typeof f.kind } : x)) })}>
                     <option value="text">Text</option><option value="phone">Phone number</option><option value="person">Person in Tensor</option><option value="date">Date</option>
@@ -346,7 +347,7 @@ export function Wizard({ tutorial: tutorialDefault, initialName }: { tutorial: b
                     {list.map(({ t, i }) => {
                       const up = (p: Partial<typeof t>) => patch({ tasks: d.tasks.map((x, j) => (j === i ? { ...x, ...p } : x)) });
                       return (
-                        <div key={i} className="rowi" style={{ gridTemplateColumns: "minmax(0,3fr) minmax(0,2fr) minmax(0,2fr) 80px 72px auto" }}>
+                        <div key={i} className="rowi wiz-row wiz-row--task">
                           <input className="tn-input" value={t.title} placeholder="Task" aria-label="Task" onChange={(e) => up({ title: e.target.value })} />
                           <select className="tn-input" value={t.trade} aria-label="Trade" onChange={(e) => up({ trade: e.target.value })}>{[...new Set([...trades, t.trade])].map((x) => <option key={x}>{x}</option>)}</select>
                           <select className="tn-input" value={t.zone} aria-label="Zone" onChange={(e) => up({ zone: e.target.value as "critical" | "general" })}><option value="critical">{d.zones.critical || "Critical"}</option><option value="general">{d.zones.general || "General"}</option></select>
@@ -374,7 +375,7 @@ export function Wizard({ tutorial: tutorialDefault, initialName }: { tutorial: b
               {d.materials.length === 0 ? <div className="empty">No materials yet.</div> : d.materials.map((m, i) => {
                 const up = (p: Partial<typeof m>) => patch({ materials: d.materials.map((x, j) => (j === i ? { ...x, ...p } : x)) });
                 return (
-                  <div key={i} className="rowi" style={{ gridTemplateColumns: "minmax(0,3fr) minmax(0,2fr) 72px minmax(0,1fr) 80px 80px auto" }}>
+                  <div key={i} className="rowi wiz-row wiz-row--mat">
                     <input className="tn-input" value={m.item} placeholder="Item" aria-label="Item" onChange={(e) => up({ item: e.target.value })} />
                     <select className="tn-input" value={m.trade} aria-label="Trade" onChange={(e) => up({ trade: e.target.value })}>{[...new Set([...trades, m.trade])].map((x) => <option key={x}>{x}</option>)}</select>
                     <input className="tn-input" type="number" value={m.qty ?? ""} placeholder="Qty" aria-label="Quantity" onChange={(e) => up({ qty: e.target.value === "" ? null : Number(e.target.value) })} />
@@ -411,7 +412,7 @@ export function Wizard({ tutorial: tutorialDefault, initialName }: { tutorial: b
         {step < STEPS.length - 1 ? (
           <button type="button" className="tn-btn tn-btn--primary" onClick={next}>Next</button>
         ) : (
-          <button type="button" className="tn-btn tn-btn--primary" onClick={save} disabled={saving}><Icon name="check" />{saving ? "Saving" : "Save template"}</button>
+          <button type="button" className="tn-btn tn-btn--primary" onClick={save} disabled={saving}><Icon name="check" />{saving ? "Saving" : templateId ? "Save setup" : "Save template"}</button>
         )}
       </div>
     </div>

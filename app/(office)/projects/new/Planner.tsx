@@ -11,6 +11,7 @@ interface Opt { id: string; name: string }
 export function Planner(props: {
   templates: { id: string; name: string; days: number; description: string | null; fields: ProjectFieldDef[] }[];
   people: { id: string; name: string }[];
+  initialTemplateId?: string;
   doctors: Opt[];
   supervisors: Opt[];
   coordinators: Opt[];
@@ -18,7 +19,7 @@ export function Planner(props: {
   defaultStart: string;
   aiLabel: string;
 }) {
-  const first = props.templates[0];
+  const first = props.templates.find((t) => t.id === props.initialTemplateId) ?? props.templates[0];
   const [templateId, setTemplateId] = useState(first?.id ?? "");
   const [name, setName] = useState("");
   const [city, setCity] = useState("");
