@@ -31,9 +31,10 @@ An order comes in → the **office coordinator** sets up the project in Tensor's
 ## Current state (2026-10-30)
 
 - Supabase project `tensor` created (ref `gwgthatwoxuggidblodi`, region ap-south-1, free tier). Storage bucket `site-media` (private) exists.
-- Applied migrations: `20261030000000_core_schema`, `20261030010000_learning_seed` (views `learned_lead_times`, `learned_tasks`, table `notifications`, `reseed_demo()`), `20261030020000_reseed_times`. Demo data is seeded.
+- Applied migrations: `20261030000000_core_schema`, `20261030010000_learning_seed` (views `learned_lead_times`, `learned_tasks`, table `notifications`, `reseed_demo()`), `20261030020000_reseed_times`. Demo data is seeded. Written, NOT yet applied: `20261106000000_prod_hardening` (login_attempts, demo_mode guard on `reseed_demo()`, `reset_to_production()`).
 - Built (WS0–WS4): the Next.js 15 app with every screen in the product spec, Telegram intake + local poller, Gemini AI with keyword fallback, routing/autopilot, doctor report, hourly checks, Cloudflare Workers config (`opennextjs-cloudflare build` passes). See `docs/09-run-and-deploy.md` and `docs/demo-script.md`.
 - Dev without a Supabase key: `TENSOR_FIXTURE=1` runs on in-memory demo data (`lib/fixture/`, dev only). Keep `lib/fixture/seed.ts` in step with `reseed_demo()`.
 - Verified against live Supabase (2026-10-30): every screen, approve/hold, planner create, daily checks, doctor decisions, Telegram intake, private storage with signed URLs. Supabase secret key and the Telegram bot (@tensortestbot, commands and description set) are in the local `.env.local`.
-- Still needs Arunav: Gemini key, `wrangler login` + deploy, webhook registration, pg_cron job (SQL in `docs/09`), GitHub repo.
+- Production hardening (2026-11-06): demo reset and Demo badge only with `DEMO_MODE=1`; long office passphrase + login lockout; single-use Telegram link codes; edit/delete for tasks, materials, projects, people; template editor at Settings > Templates; Vitest unit tests + GitHub Actions CI. Public repo: github.com/weblaze/tensor.
+- Blocked on Arunav (2026-11-06): the Supabase project stopped resolving (likely paused) and the Supabase connector now points at a different org, so the DB can't be restored or migrated from here; Cloudflare is not logged in (`wrangler login`). Production secrets are generated in `.prod-secrets.json` (git-ignored). Optional: Gemini key.
 - Superseded and to be ignored: an earlier attempt (GitHub `weblaze/ops-tracker`, paused Supabase project `ops-tracker`) and the Google Forms + Sheets track.
