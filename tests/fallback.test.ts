@@ -42,6 +42,10 @@ describe("keyword classifier", () => {
     expect(guessTrade("ground floor tiles laga diya")).toBe("Flooring");
   });
 
+  it("drops Hindi 'is/are' from notes", () => {
+    expect(run("glass panels aa gaye, 2 toote hain").note).toBe("Glass panels received, 2 broken");
+  });
+
   it("gives an empty photo a neutral note and no routes", () => {
     const c = classifyFallback({ text: "", kind: "photo", tasks, materials, examples: [] });
     expect(c.note).toBe("Photo from site");
