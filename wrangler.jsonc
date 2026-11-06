@@ -9,10 +9,14 @@
     "binding": "ASSETS"
   },
   "observability": { "enabled": true },
-  // Non-secret config. Secrets (SUPABASE_SECRET_KEY, TELEGRAM_*, GEMINI_API_KEY, OFFICE_PIN,
-  // CRON_SECRET, SESSION_SECRET) are set with `npx wrangler secret put NAME`.
+  // Non-secret config. Secrets (SUPABASE_SECRET_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET,
+  // GEMINI_API_KEY, OFFICE_PIN, CRON_SECRET, SESSION_SECRET) are uploaded with
+  // `npx wrangler secret bulk .prod-secrets.json`. APP_URL is added after the first deploy.
   "vars": {
     "SUPABASE_URL": "https://gwgthatwoxuggidblodi.supabase.co",
-    "GEMINI_MODEL": "gemini-2.5-flash"
+    "GEMINI_MODEL": "gemini-2.5-flash",
+    "TELEGRAM_BOT_USERNAME": "tensortestbot",
+    // Production: no demo badge, no demo reset. Set "1" only on a demo deployment.
+    "DEMO_MODE": "0"
   }
 }

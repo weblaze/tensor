@@ -17,3 +17,7 @@ next-env.d.ts
 # Internal business docs: local only, never pushed (repo is public)
 docs/01-business-context.md
 docs/05-costs.md
+
+# Local and production secrets (never committed)
+.env*.local
+.prod-secrets.json
