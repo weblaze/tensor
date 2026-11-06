@@ -4,7 +4,7 @@ import { ROLES, type Person, type Project, type Role } from "@/lib/types";
 import { Flash, StatusTag } from "@/components/ui";
 import { CopyLink } from "@/components/CopyLink";
 import { Icon } from "@/components/Icon";
-import { newLinkCodeAction, savePersonAction, testMessageAction, unlinkPersonAction } from "../actions";
+import { deletePersonAction, newLinkCodeAction, savePersonAction, testMessageAction, unlinkPersonAction } from "../actions";
 
 export const metadata = { title: "People" };
 
@@ -120,6 +120,13 @@ export default async function PeoplePage({ searchParams }: { searchParams: Promi
               {editing ? <a className="tn-btn tn-btn--quiet" href="/people">Cancel</a> : null}
             </div>
           </form>
+          {editing ? (
+            <form action={deletePersonAction} className="tn-row" style={{ borderTop: "1px solid var(--line)", paddingTop: 12, marginTop: 16 }}>
+              <input type="hidden" name="id" value={editing.id} />
+              <label className="check"><input type="checkbox" name="confirm" /><span>Yes, remove {editing.name}</span></label>
+              <button className="tn-btn tn-btn--quiet">Remove</button>
+            </form>
+          ) : null}
         </aside>
       </div>
     </main>

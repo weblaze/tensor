@@ -342,3 +342,114 @@ export async function resetDemoAction(form: FormData) {
   refreshAll();
   redirect(withMsg("/settings", "Demo data reset. Telegram links were kept."));
 }
+
+// ---------- Editing ----------
+
+function isoDate(s: string): string | null {
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
+}
+
+export async function updateTaskAction(form: FormData) {
+  await requireOffice();
+  const id = str(form, "id");
+  const start = isoDate(str(form, "planned_start"));
+  const end = isoDate(str(form, "planned_end")) ?? start;
+  const title = str(form, "title");
+  if (!title || !start || !end) redirect(withMsg(back(form, "/projects"), "A task needs a title and dates"));
+  must(await db().from("tasks").update({
+    title,
+    phase: str(form, "phase") || "Build",
+    trade: str(form, "trade") || "Civil",
+    zone: (str(form, "zone") || "general") as Zone,
+    planned_start: start,
+    planned_end: end! < start! ? start : end,
+  }).eq("id", id), "update task");
+  refreshAll();
+  redirect(withMsg(back(form, "/projects"), `Saved: ${title}`));
+}
+
+export async function deleteTaskAction(form: FormData) {
+  await requireOffice();
+  if (form.get("confirm") !== "on") redirect(withMsg(back(form, "/projects"), "Tick the box to confirm the delete"));
+  const { data } = await db().from("tasks").delete().eq("id", str(form, "id")).select("title").maybeSingle();
+  refreshAll();
+  redirect(withMsg(back(form, "/projects"), `Deleted task: ${data?.title ?? "task"}`));
+}
+
+export async function updateMaterialAction(form: FormData) {
+  await requireOffice();
+  const id = str(form, "id");
+  const item = str(form, "item");
+  const needBy = isoDate(str(form, "need_by"));
+  if (!item || !needBy) redirect(withMsg(back(form, "/projects"), "A material needs a name and a date"));
+  must(await db().from("materials").update({
+    item,
+    trade: str(form, "trade") || "Civil",
+    qty: str(form, "qty") ? Number(str(form, "qty")) || null : null,
+    unit: str(form, "unit") || null,
+    lead_time_days: Math.max(0, Math.round(Number(str(form, "lead_time_days")) || 0)),
+    need_by: needBy,
+    vendor: str(form, "vendor") || null,
+    note: str(form, "note") || null,
+  }).eq("id", id), "update material");
+  refreshAll();
+  redirect(withMsg(back(form, "/projects"), `Saved: ${item}`));
+}
+
+export async function deleteMaterialAction(form: FormData) {
+  await requireOffice();
+  if (form.get("confirm") !== "on") redirect(withMsg(back(form, "/projects"), "Tick the box to confirm the delete"));
+  const { data } = await db().from("materials").delete().eq("id", str(form, "id")).select("item").maybeSingle();
+  refreshAll();
+  redirect(withMsg(back(form, "/projects"), `Deleted material: ${data?.item ?? "material"}`));
+}
+
+export async function updateProjectAction(form: FormData) {
+  await requireOffice();
+  const id = str(form, "id");
+  const name = str(form, "name");
+  const city = str(form, "city");
+  const start = isoDate(str(form, "start_date"));
+  const days = Math.max(1, Math.round(Number(str(form, "planned_days")) || 0));
+  if (!name || !city || !start) redirect(withMsg(back(form, `/projects/${id}`), "A project needs a name, city and start date"));
+  const sb = db();
+  const { data: before } = await sb.from("projects").select("start_date").eq("id", id).single();
+  must(await sb.from("projects").update({
+    name,
+    city,
+    start_date: start,
+    planned_days: days,
+    doctor_id: str(form, "doctor_id") || null,
+    supervisor_id: str(form, "supervisor_id") || null,
+    coordinator_id: str(form, "coordinator_id") || null,
+    order_notes: str(form, "order_notes") || null,
+  }).eq("id", id), "update project");
+
+  // Moving the start can move the whole plan with it.
+  const shift = before ? Math.round((Date.parse(start!) - Date.parse(before.start_date as string)) / 86_400_000) : 0;
+  let moved = "";
+  if (shift !== 0 && form.get("shift_plan") === "on") {
+    const add = (d: string) => new Date(Date.parse(d) + shift * 86_400_000).toISOString().slice(0, 10);
+    const [{ data: tasks }, { data: mats }] = await Promise.all([
+      sb.from("tasks").select("id, planned_start, planned_end").eq("project_id", id).neq("status", "done"),
+      sb.from("materials").select("id, need_by").eq("project_id", id).in("status", ["to_order", "issue"]),
+    ]);
+    for (const t of tasks ?? []) await sb.from("tasks").update({ planned_start: add(t.planned_start), planned_end: add(t.planned_end) }).eq("id", t.id);
+    for (const m of mats ?? []) await sb.from("materials").update({ need_by: add(m.need_by) }).eq("id", m.id);
+    moved = ` · moved ${tasks?.length ?? 0} open tasks and ${mats?.length ?? 0} unordered materials by ${shift > 0 ? "+" : ""}${shift} days`;
+  }
+  refreshAll();
+  redirect(withMsg(back(form, `/projects/${id}`), `Project saved${moved}`));
+}
+
+export async function deletePersonAction(form: FormData) {
+  await requireOffice();
+  if (form.get("confirm") !== "on") redirect(withMsg("/people", "Tick the box to confirm"));
+  const id = str(form, "id");
+  const { data: p } = await db().from("people").select("name").eq("id", id).single();
+  const { error } = await db().from("people").delete().eq("id", id);
+  refreshAll();
+  redirect(withMsg("/people", error
+    ? `${p?.name ?? "This person"} has updates or projects on record, so they can't be removed. Unlink their Telegram instead.`
+    : `${p?.name ?? "Person"} removed`));
+}

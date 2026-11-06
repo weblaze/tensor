@@ -9,6 +9,7 @@ import { TRADES, type Decision, type Material, type Person, type Project, type T
 import { DayCounter, Flash, KindIcon, MaterialStatusTag, Photo, SourceTag, StatusTag, TaskStatusTag, TradeTag, ZoneTag, stampFor } from "@/components/ui";
 import { CopyLink } from "@/components/CopyLink";
 import { Icon } from "@/components/Icon";
+import { MaterialEdit, ProjectEdit, TaskEdit } from "./EditForms";
 import {
   addDecisionAction, addMaterialAction, addTaskAction, materialStatusAction, projectStatusAction,
   remindSupervisorAction, reopenUpdateAction, sendReportAction, taskStatusAction,
@@ -158,6 +159,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
               <dt>Status</dt><dd>{project.status}</dd>
             </dl>
             {project.order_notes ? <p className="review__raw">{project.order_notes}</p> : null}
+            <ProjectEdit project={project} people={[...people.values()]} back={`${here}?tab=report`} />
             <form action={projectStatusAction} className="tn-row">
               <Hidden fields={{ id, back: `${here}?tab=report` }} />
               <select name="status" className="tn-input" defaultValue={project.status} aria-label="Project status" style={{ flex: 1 }}>
@@ -278,6 +280,7 @@ function TasksTab({ project, tasks, here }: { project: Project; tasks: Task[]; h
                         <span className="tn-data">{t.planned_start === t.planned_end ? fmtShort(t.planned_start) : `${fmtShort(t.planned_start)} – ${fmtShort(t.planned_end)}`}</span>
                         <SourceTag source={t.source} />
                       </span>
+                      <TaskEdit task={t} back={here} />
                     </div>
                     <div className="rowi__side">
                       <TaskStatusTag status={t.status} lateDays={late} />
@@ -349,6 +352,7 @@ function MaterialsTab({ project, materials, here, head }: { project: Project; ma
                   {m.escalated_at && m.status === "to_order" ? <span>· escalated</span> : m.alert_sent_at && m.status === "to_order" ? <span>· alerted {fmtWhen(m.alert_sent_at)}</span> : null}
                   <SourceTag source={m.source} />
                 </span>
+                <MaterialEdit material={m} back={here} />
               </div>
               <div className="rowi__side">
                 <MaterialStatusTag status={m.status} daysToOrder={days} />
