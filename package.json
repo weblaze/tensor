@@ -11,7 +11,8 @@
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "webhook": "node --env-file=.env.local --experimental-strip-types --no-warnings scripts/set-webhook.ts",
-    "check:ai": "node --experimental-strip-types --no-warnings scripts/check-fallback.ts"
+    "check:ai": "node --experimental-strip-types --no-warnings scripts/check-fallback.ts",
+    "test": "vitest run"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
@@ -26,6 +27,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "typescript": "^5.9.3",
+    "vitest": "^3.2.7",
     "wrangler": "^4.156.0"
   }
 }
