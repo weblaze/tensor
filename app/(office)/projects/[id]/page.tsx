@@ -49,6 +49,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
   const updates = (ur.data ?? []) as Update[];
   const decisions = (dr.data ?? []) as Decision[];
   const people = new Map(((pr.data ?? []) as Person[]).map((p) => [p.id, p]));
+  const head = [...people.values()].find((p) => p.role === "head")?.name ?? "the head";
   const prog = progressOf(project, tasks, t0);
   const sup = project.supervisor_id ? people.get(project.supervisor_id) : undefined;
   const doc = project.doctor_id ? people.get(project.doctor_id) : undefined;
@@ -96,7 +97,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
 
       {tab === "updates" ? <UpdatesTab project={project} updates={updates} people={people} here={here} /> : null}
       {tab === "tasks" ? <TasksTab project={project} tasks={tasks} here={`${here}?tab=tasks`} /> : null}
-      {tab === "materials" ? <MaterialsTab project={project} materials={materials} here={`${here}?tab=materials`} /> : null}
+      {tab === "materials" ? <MaterialsTab head={head} project={project} materials={materials} here={`${here}?tab=materials`} /> : null}
       {tab === "report" ? (
         <section className="split">
           <div className="stack-4">
@@ -214,7 +215,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
                   <p className="tn-entry__note">{u.note ?? u.raw_text}</p>
                   <p className="tn-entry__who">
                     {u.person_id ? people.get(u.person_id)?.name : "Unknown"}
-                    {u.status === "approved" ? ` · ${(u.final_routes ?? []).length ? `sent to ${(u.final_routes ?? []).map((r) => (r === "head" ? "Prashant" : r)).join(", ")}` : "filed"}` : ""}
+                    {u.status === "approved" ? ` · ${(u.final_routes ?? []).length ? `sent to ${(u.final_routes ?? []).map((r) => (r === "head" ? head : r)).join(", ")}` : "filed"}` : ""}
                     {u.auto_routed ? " · autopilot" : ""}
                   </p>
                 </article>
@@ -324,13 +325,13 @@ function TasksTab({ project, tasks, here }: { project: Project; tasks: Task[]; h
   );
 }
 
-function MaterialsTab({ project, materials, here }: { project: Project; materials: Material[]; here: string }) {
+function MaterialsTab({ project, materials, here, head }: { project: Project; materials: Material[]; here: string; head: string }) {
   const t0 = today();
   const rank = (m: Material) => (m.status === "issue" ? 0 : m.status === "to_order" ? 1 : m.status === "ordered" ? 2 : 3);
   const list = [...materials].sort((a, b) => rank(a) - rank(b) || a.order_by.localeCompare(b.order_by));
   return (
     <section className="stack-4">
-      <p className="tn-muted">Order-by = needed on site − lead time. Procurement is alerted 2 days before; unordered after 24 hours goes to Prashant.</p>
+      <p className="tn-muted">Order-by = needed on site − lead time. Procurement is alerted 2 days before; unordered after 24 hours goes to {head}.</p>
       <div className="rows">
         {list.map((m) => {
           const days = diffDays(m.order_by, t0);

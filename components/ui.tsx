@@ -124,7 +124,7 @@ export function Photo({ url, kind, stamp, alt }: { url: string | null; kind: Upd
       ) : (
         <div className="photo__empty">
           <Icon name={kind === "voice" ? "mic" : kind === "location" ? "pin" : kind === "text" ? "text" : "camera"} />
-          <span>{kind === "photo" ? "Photo not stored in demo data" : kind === "voice" ? "Voice note" : kind === "location" ? "Location" : "Text message"}</span>
+          <span>{kind === "photo" ? "No photo" : kind === "voice" ? "Voice note" : kind === "location" ? "Location" : "Text message"}</span>
         </div>
       )}
       {stamp ? <span className="tn-entry__stamp">{stamp}</span> : null}

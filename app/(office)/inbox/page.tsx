@@ -9,10 +9,10 @@ import type { ReviewItem } from "./ReviewCard";
 import { InboxList } from "./InboxList";
 import { Shortcuts } from "./Shortcuts";
 import { autopilotAction, reopenUpdateAction } from "../actions";
+import { headName } from "@/lib/config";
 
 export const metadata = { title: "Inbox" };
 
-const ROUTE_WORD: Record<string, string> = { doctor: "Doctor", procurement: "Procurement", head: "Prashant" };
 
 async function actionLabels(updates: Update[]): Promise<Map<string, string>> {
   const matIds = updates.map((u) => u.suggested_action).filter((a): a is Extract<SuggestedAction, { type: "material_status" }> => a?.type === "material_status").map((a) => a.material_id);
@@ -41,13 +41,14 @@ async function actionLabels(updates: Update[]): Promise<Map<string, string>> {
 export default async function InboxPage({ searchParams }: { searchParams: Promise<{ msg?: string }> }) {
   const { msg } = await searchParams;
   const sb = db();
-  const [pendingRes, reviewedRes, projRes, peopleRes, meter, autopilot] = await Promise.all([
+  const [pendingRes, reviewedRes, projRes, peopleRes, meter, autopilot, head] = await Promise.all([
     sb.from("updates").select("*").eq("status", "pending").order("received_at", { ascending: true }).limit(50),
     sb.from("updates").select("*").neq("status", "pending").not("reviewed_at", "is", null).order("reviewed_at", { ascending: false }).limit(8),
     sb.from("projects").select("*").neq("status", "closed"),
     sb.from("people").select("id, name"),
     autopilotMeter(),
     getAutopilot(),
+    headName(),
   ]);
   const pending = (pendingRes.data ?? []) as Update[];
   const reviewed = (reviewedRes.data ?? []) as Update[];
@@ -101,7 +102,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
 
       <div className="split">
         <div className="stack-4">
-          <InboxList items={items} />
+          <InboxList items={items} headName={head} />
 
           {reviewed.length ? (
             <section className="section">
@@ -117,7 +118,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
                         <span className="rowi__meta">
                           <span>{p?.city ?? "Unfiled"}</span>
                           <span>·</span>
-                          <span>{u.status === "held" ? "Held" : (u.final_routes ?? []).length ? `To ${(u.final_routes ?? []).map((r) => ROUTE_WORD[r]).join(", ")}` : "Filed only"}</span>
+                          <span>{u.status === "held" ? "Held" : (u.final_routes ?? []).length ? `To ${(u.final_routes ?? []).map((r) => (r === "head" ? head : r === "doctor" ? "Doctor" : "Procurement")).join(", ")}` : "Filed only"}</span>
                           {u.auto_routed ? <span className="src">Autopilot</span> : null}
                           {changed ? <span className="tn-caption">· you changed the routes</span> : null}
                           <span>· {fmtWhen(u.reviewed_at)}</span>

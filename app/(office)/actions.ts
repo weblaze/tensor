@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireOffice } from "@/lib/auth";
+import { demoMode, headName } from "@/lib/config";
 import { db, must } from "@/lib/db";
 import { fmtShort } from "@/lib/dates";
 import { notifyPerson, notifyRole } from "@/lib/notify";
@@ -33,8 +34,6 @@ function refreshAll() {
 
 export interface ReviewResult { ok: boolean; message: string }
 
-const WHO: Record<RouteTarget, string> = { doctor: "the doctor", procurement: "procurement", head: "Prashant" };
-
 export async function approveUpdateAction(form: FormData): Promise<ReviewResult> {
   await requireOffice();
   const id = str(form, "id");
@@ -48,6 +47,7 @@ export async function approveUpdateAction(form: FormData): Promise<ReviewResult>
       applySuggestedAction: form.get("apply_action") !== "off",
     });
     refreshAll();
+    const WHO: Record<RouteTarget, string> = { doctor: "the doctor", procurement: "procurement", head: await headName() };
     const parts = [
       "Approved",
       res.action ? res.action : null,
@@ -131,7 +131,7 @@ export async function escalateAction(form: FormData) {
   await notifyRole("head", "escalation", `Escalated by the office · ${m.projects.code} ${m.projects.name}, ${m.projects.city}\n${m.item} still not ordered. Order-by was ${fmtShort(m.order_by)}.`, { projectId: m.projects.id });
   await db().from("materials").update({ escalated_at: new Date().toISOString() }).eq("id", id);
   refreshAll();
-  redirect(withMsg(back(form, "/"), `${m.item} escalated to Prashant`));
+  redirect(withMsg(back(form, "/"), `${m.item} escalated to ${await headName()}`));
 }
 
 export async function remindSupervisorAction(form: FormData) {
@@ -335,6 +335,8 @@ export async function runChecksAction(form: FormData) {
 
 export async function resetDemoAction(form: FormData) {
   await requireOffice();
+  // Never on a production deployment: reseed_demo() replaces every project.
+  if (!demoMode()) redirect(withMsg("/settings", "Demo reset is switched off on this deployment"));
   if (str(form, "confirm") !== "RESET") redirect(withMsg("/settings", "Type RESET to confirm"));
   must(await db().rpc("reseed_demo"), "reset demo");
   refreshAll();

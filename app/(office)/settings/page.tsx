@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { db } from "@/lib/db";
+import { demoMode, headName } from "@/lib/config";
 import { fmtWhen } from "@/lib/dates";
 import { aiConfigured } from "@/lib/ai";
 import { channel } from "@/lib/messaging";
@@ -15,7 +17,7 @@ const KIND_WORD: Record<string, string> = {
   escalation: "Escalation",
   doctor_report: "Doctor report",
   update_procurement: "Update to procurement",
-  update_head: "Update to Prashant",
+  update_head: "Update to the head",
   quiet_sites: "Quiet sites",
   reminder: "Reminder",
   material_issue: "Material issue",
@@ -27,12 +29,14 @@ const KIND_WORD: Record<string, string> = {
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ msg?: string }> }) {
   const { msg } = await searchParams;
   const sb = db();
-  const [ap, meter, nr, pr] = await Promise.all([
+  const [ap, meter, nr, pr, head] = await Promise.all([
     getAutopilot(),
     autopilotMeter(),
     sb.from("notifications").select("*").order("created_at", { ascending: false }).limit(30),
     sb.from("people").select("id, name"),
+    headName(),
   ]);
+  const demo = demoMode();
   const outbox = (nr.data ?? []) as Notification[];
   const names = new Map(((pr.data ?? []) as Pick<Person, "id" | "name">[]).map((p) => [p.id, p.name]));
   const integrations = [
@@ -47,7 +51,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       <div className="page-head">
         <div className="page-head__text">
           <h1 className="tn-title">Settings</h1>
-          <p className="tn-muted">Autopilot, daily checks and demo data.</p>
+          <p className="tn-muted">Autopilot, daily checks, templates and messages.</p>
         </div>
       </div>
 
@@ -86,7 +90,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <span className="tn-stamp">Every hour</span>
             <h2 className="tn-heading">Daily checks</h2>
             <p className="tn-muted">
-              Procurement alerts 2 days before order-by, escalation to Prashant after 24 hours, quiet-site reminders from 6 PM and the doctor report at 9 PM.
+              Procurement alerts 2 days before order-by, escalation to {head} after 24 hours, quiet-site reminders from 6 PM and the doctor report at 9 PM.
             </p>
           </div>
           <form action={runChecksAction}>
@@ -135,6 +139,18 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       </section>
 
       <section className="section">
+        <div className="card row-between">
+          <div className="stack-2">
+            <span className="tn-stamp">Planning</span>
+            <h2 className="tn-heading">Project templates</h2>
+            <p className="tn-muted">The tasks, materials and lead times new projects start from.</p>
+          </div>
+          <Link href="/settings/templates" className="tn-btn"><Icon name="file" />Edit templates</Link>
+        </div>
+      </section>
+
+      {demo ? (
+      <section className="section">
         <div className="card stack-4" style={{ maxWidth: 560 }}>
           <div className="stack-2">
             <span className="tn-stamp">Demo</span>
@@ -150,6 +166,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           </form>
         </div>
       </section>
+      ) : null}
     </main>
   );
 }
