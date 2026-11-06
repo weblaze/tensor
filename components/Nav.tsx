@@ -3,29 +3,30 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon } from "./Icon";
 
-const ITEMS = [
-  { href: "/", label: "Today", icon: "home" },
-  { href: "/inbox", label: "Inbox", icon: "inbox" },
-  { href: "/projects", label: "Projects", icon: "folder" },
-  { href: "/people", label: "People", icon: "users" },
-  { href: "/settings", label: "Settings", icon: "settings" },
-];
+export interface NavItem {
+  href: string;
+  label: string;
+  icon: string;
+  count?: number;
+}
 
 function active(path: string, href: string) {
   return href === "/" ? path === "/" : path === href || path.startsWith(`${href}/`);
 }
 
-export function Nav({ pending, variant }: { pending: number; variant: "top" | "bottom" }) {
+export function Nav({ items, variant }: { items: NavItem[]; variant: "top" | "bottom" }) {
   const path = usePathname();
   return (
-    <nav className={variant === "top" ? "shell-nav" : "shell-bottom"} aria-label="Main">
-      {ITEMS.map((it) => (
+    <nav
+      className={variant === "top" ? "shell-nav" : "shell-bottom"}
+      aria-label="Main"
+      style={variant === "bottom" ? { gridTemplateColumns: `repeat(${items.length}, 1fr)` } : undefined}
+    >
+      {items.map((it) => (
         <Link key={it.href} href={it.href} aria-current={active(path, it.href) ? "page" : undefined}>
           {variant === "bottom" ? <Icon name={it.icon} /> : null}
           {it.label}
-          {it.href === "/inbox" && pending > 0 ? (
-            <span className="nav-count" aria-label={`${pending} waiting`}>{pending}</span>
-          ) : null}
+          {it.count ? <span className="nav-count" aria-label={`${it.count} waiting`}>{it.count}</span> : null}
         </Link>
       ))}
     </nav>

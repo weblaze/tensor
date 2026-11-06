@@ -1,3 +1,4 @@
+import { MANAGERS, requirePage } from "@/lib/auth";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
@@ -63,6 +64,7 @@ function RemoveRow({ templateId, id, kind }: { templateId: string; id: string; k
 }
 
 export default async function TemplatePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ msg?: string }> }) {
+  await requirePage(...MANAGERS);
   const { id } = await params;
   const { msg } = await searchParams;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();

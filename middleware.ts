@@ -1,13 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE, verifySessionValue } from "@/lib/session";
+import { readSessionValue, SESSION_COOKIE } from "@/lib/session";
 
-// Everything is office-only except login, the doctor report, and the machine endpoints (which check their own secrets).
+// Everything needs a signed-in person (or the office login) except login, the doctor report, and the machine endpoints (which check their own secrets).
 const PUBLIC = [/^\/login/, /^\/r\//, /^\/api\/telegram/, /^\/api\/cron/, /^\/api\/health/];
 
 export async function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
   if (PUBLIC.some((re) => re.test(pathname))) return NextResponse.next();
-  const ok = await verifySessionValue(req.cookies.get(SESSION_COOKIE)?.value);
+  // Signature and expiry only; who may see what is checked by each page and action (lib/auth).
+  const ok = await readSessionValue(req.cookies.get(SESSION_COOKIE)?.value);
   if (ok) return NextResponse.next();
   if (pathname.startsWith("/api/")) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });

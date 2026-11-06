@@ -1,3 +1,4 @@
+import { MANAGERS, requirePage } from "@/lib/auth";
 import Link from "next/link";
 import { exceptionsFor, loadSnapshot, progressOf, type Exception } from "@/lib/insights";
 import { fmtDate, fmtWhen, plural, today } from "@/lib/dates";
@@ -57,6 +58,7 @@ function ExceptionAction({ e }: { e: Exception }) {
 }
 
 export default async function TodayPage({ searchParams }: { searchParams: Promise<{ msg?: string }> }) {
+  await requirePage(...MANAGERS);
   const { msg } = await searchParams;
   const [snap, head] = await Promise.all([loadSnapshot(), headName()]);
   const t0 = today();

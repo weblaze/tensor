@@ -1,3 +1,4 @@
+import { MANAGERS, requirePage } from "@/lib/auth";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { plural } from "@/lib/dates";
@@ -9,6 +10,7 @@ import { createTemplateAction } from "./actions";
 export const metadata = { title: "Templates" };
 
 export default async function TemplatesPage({ searchParams }: { searchParams: Promise<{ msg?: string }> }) {
+  await requirePage(...MANAGERS);
   const { msg } = await searchParams;
   const sb = db();
   const [tr, tt, tm, pr] = await Promise.all([
