@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db, hasDb } from "@/lib/db";
+import { demoMode } from "@/lib/config";
 import { Nav } from "@/components/Nav";
 import { Mark } from "@/components/ui";
 import { Icon } from "@/components/Icon";
@@ -40,7 +41,7 @@ export default async function OfficeLayout({ children }: { children: React.React
           </Link>
           <Nav pending={pending} variant="top" />
           <div className="shell-right">
-            <span className="demo-flag" title="Prototype with demo data">Demo</span>
+            {demoMode() ? <span className="demo-flag" title="Demo deployment with sample data">Demo</span> : null}
             <form action={logout}>
               <button className="tn-btn tn-btn--quiet" aria-label="Sign out">
                 <Icon name="logout" />

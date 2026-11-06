@@ -4,6 +4,7 @@ import { addDays, fmtShort, fmtDue, istHour, today } from "./dates";
 import { loadSnapshot, quietDays } from "./insights";
 import { notifyPerson, notifyRole, peopleByRole } from "./notify";
 import { sendReport } from "./report";
+import { headName } from "./config";
 import type { Material, Project } from "./types";
 
 export interface CronSummary {
@@ -25,6 +26,7 @@ export async function runDailyChecks(opts: { force?: boolean } = {}): Promise<Cr
   const sb = db();
   const t0 = today();
   const hour = istHour();
+  const head = await headName();
   const summary: CronSummary = { at: new Date().toISOString(), alerts: 0, escalations: 0, reports: [], quietSites: [] };
 
   const { data: projData } = await sb.from("projects").select("*").eq("status", "active");
@@ -45,7 +47,7 @@ export async function runDailyChecks(opts: { force?: boolean } = {}): Promise<Cr
     await notifyRole(
       "procurement",
       "procurement_alert",
-      [`Order now · ${p.code} ${p.name}, ${p.city}`, ...lines, "Tap Ordered when done. Not ordered in 24 hours goes to Prashant."].join("\n"),
+      [`Order now · ${p.code} ${p.name}, ${p.city}`, ...lines, `Tap Ordered when done. Not ordered in 24 hours goes to ${head}.`].join("\n"),
       { projectId: pid, buttons: items.slice(0, 8).map((m) => [{ text: `Ordered: ${m.item}`.slice(0, 60), data: `ord:${m.id}` }]) },
     );
     await sb.from("materials").update({ alert_sent_at: new Date().toISOString() }).in("id", items.map((m) => m.id));

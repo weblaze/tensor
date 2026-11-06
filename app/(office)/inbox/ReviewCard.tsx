@@ -27,14 +27,14 @@ export interface ReviewItem {
   offered?: { id: string; label: string }[];
 }
 
-const ROUTE_LABEL: Record<RouteTarget, string> = { doctor: "Doctor", procurement: "Procurement", head: "Prashant" };
 const ROUTE_HELP: Record<RouteTarget, string> = {
   doctor: "Tonight's report",
   procurement: "Telegram now",
   head: "Telegram now",
 };
 
-export function ReviewCard({ item, index, onDone }: { item: ReviewItem; index: number; onDone?: (message: string) => void }) {
+export function ReviewCard({ item, index, headName, onDone }: { item: ReviewItem; index: number; headName: string; onDone?: (message: string) => void }) {
+  const ROUTE_LABEL: Record<RouteTarget, string> = { doctor: "Doctor", procurement: "Procurement", head: headName };
   const [result, setResult] = useState<ReviewResult | null>(null);
   const [pending, start] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
@@ -76,7 +76,7 @@ export function ReviewCard({ item, index, onDone }: { item: ReviewItem; index: n
               {item.kind === "location" && item.lat !== null ? (
                 <a href={`https://maps.google.com/?q=${item.lat},${item.lng}`} target="_blank" rel="noreferrer">Open map</a>
               ) : null}
-              {!item.mediaUrl && item.kind === "photo" ? <span>Photo not stored in demo data</span> : null}
+              {!item.mediaUrl && item.kind === "photo" ? <span>Photo could not be saved</span> : null}
               {item.kind === "text" ? <span>Text message</span> : null}
             </div>
           )}
@@ -131,7 +131,7 @@ export function ReviewCard({ item, index, onDone }: { item: ReviewItem; index: n
                   </label>
                 ))}
               </div>
-              <span className="tn-help">Procurement and Prashant get it on Telegram now. The doctor sees it in tonight&apos;s report.</span>
+              <span className="tn-help">Procurement and {headName} get it on Telegram now. The doctor sees it in tonight&apos;s report.</span>
             </fieldset>
 
             {item.actionLabel ? (

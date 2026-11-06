@@ -4,6 +4,7 @@ import { fmtDate, fmtWhen, plural, today } from "@/lib/dates";
 import { Clear, DayCounter, Flash, StatusTag } from "@/components/ui";
 import { Icon } from "@/components/Icon";
 import { escalateAction, materialStatusAction, remindSupervisorAction } from "./actions";
+import { headName } from "@/lib/config";
 
 export const metadata = { title: "Today" };
 
@@ -57,7 +58,7 @@ function ExceptionAction({ e }: { e: Exception }) {
 
 export default async function TodayPage({ searchParams }: { searchParams: Promise<{ msg?: string }> }) {
   const { msg } = await searchParams;
-  const snap = await loadSnapshot();
+  const [snap, head] = await Promise.all([loadSnapshot(), headName()]);
   const t0 = today();
   const exceptions = exceptionsFor(snap, t0);
   const active = snap.projects.filter((p) => p.status !== "closed");
@@ -121,7 +122,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
                   <p className="tn-exc__meta">
                     {e.site}
                     {e.person ? ` · ${e.person}` : ""} · <span className="tn-data">{e.projectCode}</span>
-                    {e.escalated ? " · escalated to Prashant" : ""}
+                    {e.escalated ? ` · escalated to ${head}` : ""}
                   </p>
                 </div>
                 <ExceptionAction e={e} />
