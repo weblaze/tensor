@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { hasDb } from "@/lib/db";
+import { db, hasDb } from "@/lib/db";
 import { fmtDate, fmtShort, fmtTime, istDate, plural } from "@/lib/dates";
 import { getReport } from "@/lib/report";
 import { DayCounter, Mark, Photo, StatusTag, TradeTag, ZoneTag, stampFor } from "@/components/ui";
@@ -13,9 +13,10 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
   const { token } = await params;
-  if (!hasDb()) return { title: "Site report" };
-  const r = await getReport(token);
-  return { title: r ? `${r.project.name} · site report` : "Site report", robots: { index: false, follow: false } };
+  if (!hasDb() || !/^[\w-]{8,64}$/.test(token)) return { title: "Site report" };
+  // Only the name: the page itself loads the full report.
+  const { data } = await db().from("projects").select("name").eq("report_token", token).maybeSingle();
+  return { title: data ? `${data.name} · site report` : "Site report", robots: { index: false, follow: false } };
 }
 
 export default async function ReportPage({ params, searchParams }: {

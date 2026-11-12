@@ -474,8 +474,10 @@ export async function updateProjectAction(form: FormData) {
       sb.from("tasks").select("id, planned_start, planned_end").eq("project_id", id).neq("status", "done"),
       sb.from("materials").select("id, need_by").eq("project_id", id).in("status", ["to_order", "issue"]),
     ]);
-    for (const t of tasks ?? []) await sb.from("tasks").update({ planned_start: add(t.planned_start), planned_end: add(t.planned_end) }).eq("id", t.id);
-    for (const m of mats ?? []) await sb.from("materials").update({ need_by: add(m.need_by) }).eq("id", m.id);
+    await Promise.all([
+      ...(tasks ?? []).map((t) => sb.from("tasks").update({ planned_start: add(t.planned_start), planned_end: add(t.planned_end) }).eq("id", t.id)),
+      ...(mats ?? []).map((m) => sb.from("materials").update({ need_by: add(m.need_by) }).eq("id", m.id)),
+    ]);
     moved = ` · moved ${tasks?.length ?? 0} open tasks and ${mats?.length ?? 0} unordered materials by ${shift > 0 ? "+" : ""}${shift} days`;
   }
   refreshAll();

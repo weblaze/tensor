@@ -136,15 +136,16 @@ export async function approveUpdate(id: string, input: ApproveInput): Promise<{ 
 
   const { project, person } = await loadUpdateContext(updated);
   const photo = updated.kind === "photo" && updated.media_path ? (await signedUrls([updated.media_path])).get(updated.media_path) ?? null : null;
-  const notified: { target: RouteTarget; sent: boolean }[] = [];
-  for (const target of ["procurement", "head"] as const) {
-    if (!routes.includes(target)) continue;
-    const results = await notifyRole(target, `update_${target}`, routeMessage(updated, project, person, actionLine, target), {
-      projectId: updated.project_id,
-      photoUrl: photo,
-    });
-    notified.push({ target, sent: results.some((r) => r.status === "sent") });
-  }
+  // Procurement and the head are told at the same time.
+  const notified = await Promise.all(
+    (["procurement", "head"] as const).filter((t) => routes.includes(t)).map(async (target) => {
+      const results = await notifyRole(target, `update_${target}`, routeMessage(updated, project, person, actionLine, target), {
+        projectId: updated.project_id,
+        photoUrl: photo,
+      });
+      return { target: target as RouteTarget, sent: results.some((x) => x.status === "sent") };
+    }),
+  );
   return { action: actionLine, notified };
 }
 
@@ -163,16 +164,4 @@ export async function maybeAutopilot(u: Update): Promise<boolean> {
   if ((u.ai_confidence ?? 0) < ap.min_confidence) return false;
   await approveUpdate(u.id, { routes: u.suggested_routes, auto: true });
   return true;
-}
-
-export async function approvedDoctorCount(projectId: string, date: string = today()): Promise<number> {
-  const { data } = await db()
-    .from("updates")
-    .select("id, received_at")
-    .eq("project_id", projectId)
-    .eq("status", "approved")
-    .contains("final_routes", ["doctor"])
-    .gte("received_at", `${date}T00:00:00+05:30`)
-    .lt("received_at", `${date}T23:59:59.999+05:30`);
-  return (data ?? []).length;
 }

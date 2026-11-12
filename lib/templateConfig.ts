@@ -94,6 +94,3 @@ export function nextStatus(cfg: TemplateConfig, kind: StatusKind, own?: string |
   return i >= 0 && i < list.length - 1 ? list[i + 1] : null;
 }
 
-export function slugKey(label: string): string {
-  return label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 40) || "field";
-}

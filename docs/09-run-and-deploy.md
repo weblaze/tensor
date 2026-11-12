@@ -27,7 +27,7 @@ Then on a phone: open the bot, send `/start OM0142` (Supervisor 1's code, see Pe
 npm run typecheck
 npm run build
 npm test            # unit tests (also run by GitHub Actions on every push)
-npm run check:ai    # keyword classifier on sample messages
+
 ```
 
 ## Environment

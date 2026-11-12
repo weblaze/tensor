@@ -87,5 +87,3 @@ export const telegram: Channel = {
   },
 };
 
-/** Calls Telegram's raw API; used by the webhook setup and the local poller. */
-export const telegramApi = call;
