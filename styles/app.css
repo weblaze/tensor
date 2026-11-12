@@ -220,3 +220,4 @@ legend { padding: 0; }
 }
 .wiz-row > * { min-width: 0; }
 .wiz-row .tn-input { width: 100%; min-width: 0; }
+.rowi--selected { background: var(--scrub-soft); }

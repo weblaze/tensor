@@ -9,4 +9,4 @@ Use the project Gmail for every sign-up. All free tiers.
 5. **Cloudflare**: sign up with Gmail; agents will run `wrangler login` (opens your browser) and deploy. Fallback: Vercel with Gmail/GitHub login.
 6. Pick `OFFICE_PIN` and random strings for `TELEGRAM_WEBHOOK_SECRET` and `CRON_SECRET`.
 7. After deploy: set `APP_URL`, register the Telegram webhook, and ask the lead agent to create the pg_cron job.
-8. For the demo: two phones linked to the bot (one as supervisor Om, one as doctor), using link codes from `/people`.
+8. For the demo: two phones linked to the bot (one as supervisor Supervisor 1, one as doctor), using link codes from `/people`.

@@ -295,18 +295,36 @@ export async function savePersonAction(form: FormData) {
   const name = str(form, "name");
   const role = str(form, "role") as Role;
   if (!name || !ROLES.includes(role)) redirect(withMsg("/people", "Add a name and role"));
-  const row = { name, role, phone: str(form, "phone") || null, current_project_id: str(form, "current_project_id") || null };
-  if (id) must(await db().from("people").update(row).eq("id", id), "save person");
-  else must(await db().from("people").insert(row), "add person");
+  const sb = db();
+  const row = { name, role, phone: str(form, "phone") || null };
+  const saved = must(
+    id ? await sb.from("people").update(row).eq("id", id).select("id, current_project_id").single()
+       : await sb.from("people").insert(row).select("id, current_project_id").single(),
+    "save person",
+  ) as { id: string; current_project_id: string | null };
+
+  // Sites: the person becomes the supervisor (or doctor) of each ticked site and stops being it elsewhere.
+  const sites = form.getAll("sites").map(String).filter(Boolean);
+  for (const col of ["supervisor_id", "doctor_id"] as const) {
+    const mine = (role === "supervisor" && col === "supervisor_id") || (role === "doctor" && col === "doctor_id");
+    const { data: held } = await sb.from("projects").select("id").eq(col, saved.id).neq("status", "closed");
+    const drop = (held ?? []).map((p) => p.id as string).filter((pid) => !mine || !sites.includes(pid));
+    if (drop.length) await sb.from("projects").update({ [col]: null }).in("id", drop);
+    if (mine && sites.length) await sb.from("projects").update({ [col]: saved.id }).in("id", sites);
+  }
+  // The bot's remembered site must be one of theirs.
+  if (saved.current_project_id && !sites.includes(saved.current_project_id)) {
+    await sb.from("people").update({ current_project_id: role === "supervisor" && sites.length === 1 ? sites[0] : null }).eq("id", saved.id);
+  }
   refreshAll();
-  redirect(withMsg("/people", id ? `${name} saved` : `${name} added; share their link code`));
+  redirect(withMsg(`/people?edit=${saved.id}`, id ? `${name} saved` : `${name} added. Send them their Telegram link below.`));
 }
 
 export async function unlinkPersonAction(form: FormData) {
   await requireOffice();
   await db().from("people").update({ telegram_chat_id: null }).eq("id", str(form, "id"));
   refreshAll();
-  redirect(withMsg("/people", "Telegram unlinked"));
+  redirect(withMsg(`/people?edit=${str(form, "id")}`, "Telegram disconnected"));
 }
 
 export async function newLinkCodeAction(form: FormData) {
@@ -314,7 +332,7 @@ export async function newLinkCodeAction(form: FormData) {
   const code = newLinkCode();
   await db().from("people").update({ link_code: code }).eq("id", str(form, "id"));
   refreshAll();
-  redirect(withMsg("/people", `New code ${code}`));
+  redirect(withMsg(`/people?edit=${str(form, "id")}`, `New link made (code ${code}). The old one no longer works.`));
 }
 
 export async function testMessageAction(form: FormData) {
@@ -323,7 +341,7 @@ export async function testMessageAction(form: FormData) {
   const p = data as Person;
   const r = await notifyPerson(p, "test", `Test from Tensor. ${p.name}, you are linked as ${p.role}.`);
   refreshAll();
-  redirect(withMsg("/people", r.status === "sent" ? `Test message sent to ${p.name}` : `Not sent: ${r.error}`));
+  redirect(withMsg(`/people?edit=${p.id}`, r.status === "sent" ? `Test message sent to ${p.name}` : `Not sent: ${r.error}`));
 }
 
 // ---------- Settings ----------

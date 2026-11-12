@@ -69,7 +69,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
   const toOrder = materials.filter((m) => m.status === "to_order" && diffDays(m.order_by, t0) <= 2).length;
   const lateTasks = tasks.filter((t) => t.status !== "done" && diffDays(t0, t.planned_end) > 0).length;
   const here = `/projects/${id}`;
-  const url = reportUrl(project, t0);
+  const url = reportUrl(project);
 
   const tabs: { key: Tab; label: string; count?: number }[] = [
     { key: "updates", label: "Updates", count: pendingCount || undefined },
@@ -90,7 +90,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
           <span className="tn-stamp">{project.code} · {project.city}{project.status !== "active" ? ` · ${project.status}` : ""}</span>
           <h1 className="tn-display">{project.name}</h1>
           <p className="tn-muted">
-            Supervisor {sup?.name ?? "not set"} · Doctor {doc?.name ?? "not set"} · {project.start_date > t0 ? "Starts" : "Started"} {fmtDate(project.start_date)}
+            Supervisor {sup?.name ?? (manage ? <Link href={`${here}?tab=report#edit`}>assign</Link> : "not set")} · Doctor {doc?.name ?? (manage ? <Link href={`${here}?tab=report#edit`}>assign</Link> : "not set")} · {project.start_date > t0 ? "Starts" : "Started"} {fmtDate(project.start_date)}
           </p>
         </div>
         <div style={{ minWidth: 280, flex: "0 1 420px" }}>
@@ -115,9 +115,10 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
           <div className="stack-4">
             <div className="card stack-4">
               <div className="stack-2">
-                <h2 className="tn-heading">Tonight&apos;s report</h2>
+                <h2 className="tn-heading">Doctor&apos;s report</h2>
                 <p className="tn-muted">
-                  Approved updates for the doctor go out at 9 PM{doc?.telegram_chat_id ? ` to ${doc.name} on Telegram` : ""}.
+                  One link that never changes: it always shows today, and earlier days are inside. Share it with the doctor once.
+                  {doc?.telegram_chat_id ? ` ${doc.name} also gets a reminder on Telegram at 9 PM when there are approved updates.` : ""}
                   {project.last_report_sent_on ? ` Last sent ${fmtDate(project.last_report_sent_on)}.` : " Not sent yet."}
                 </p>
               </div>

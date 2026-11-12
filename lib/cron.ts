@@ -35,7 +35,7 @@ export async function runDailyChecks(opts: { force?: boolean } = {}): Promise<Cr
   const ids = projects.map((p) => p.id);
   if (!ids.length) return summary;
 
-  // 1. Procurement alerts, grouped per project so Anil gets one message per site.
+  // 1. Procurement alerts, grouped per project so procurement gets one message per site.
   const { data: dueData } = await sb.from("materials").select("*").in("project_id", ids).eq("status", "to_order")
     .lte("order_by", addDays(t0, 2)).is("alert_sent_at", null).order("order_by");
   const due = (dueData ?? []) as Material[];

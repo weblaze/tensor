@@ -156,10 +156,16 @@ export async function sortUpdate(update: Update, image?: { bytes: ArrayBuffer; m
   return saved;
 }
 
-async function confirm(chatId: number, u: Update, project: Project, multiSite: boolean) {
+/** Confirm the filing; a supervisor with several sites gets one-tap buttons to move it if it went to the wrong one. */
+async function confirm(chatId: number, u: Update, project: Project, sites: Project[]) {
   const trade = u.trade ? ` · ${u.trade}` : "";
-  const switchHint = multiSite ? "\nWrong site? Send /site" : "";
-  await reply(chatId, `Logged for ${project.city}${trade}. Office will review.\n${project.city}${trade} में दर्ज हो गया। ऑफिस देखेगा।${switchHint}`);
+  const others = sites.filter((p) => p.id !== project.id).slice(0, 6);
+  const hint = others.length ? "\nWrong site? Tap below. / गलत साइट? नीचे दबाएँ।" : "";
+  await reply(
+    chatId,
+    `Logged for ${project.city}${trade}. Office will review.\n${project.city}${trade} में दर्ज हो गया। ऑफिस देखेगा।${hint}`,
+    others.length ? others.map((p) => [{ text: `Move to ${p.city}`, data: `mv:${u.id.slice(0, 8)}:${p.code}` }]) : undefined,
+  );
 }
 
 async function handleMessage(msg: TgMessage) {
@@ -241,7 +247,7 @@ async function handleMessage(msg: TgMessage) {
 
   const image = kind === "photo" && media ? { bytes: media.bytes, mime: media.mime } : undefined;
   const sorted = await sortUpdate(inserted, image);
-  await confirm(chatId, sorted, project, projects.length > 1);
+  await confirm(chatId, sorted, project, projects);
 }
 
 async function handleCallback(cb: TgCallback) {
@@ -262,6 +268,25 @@ async function handleCallback(cb: TgCallback) {
     return reply(chatId, `Now reporting for ${p.city} · ${p.name}.\nअब आपकी अपडेट ${p.city} साइट में जाएंगी।`);
   }
 
+  if (data.startsWith("mv:")) {
+    // Move a just-sent update to another of the sender's sites, and remember that site for next time.
+    const [, shortId, code] = data.split(":");
+    const { data: p } = await sb.from("projects").select("*").eq("code", code).maybeSingle();
+    const target = p as Project | null;
+    const mine = await candidateProjects(person);
+    if (!target || !mine.some((x) => x.id === target.id)) return ch.answerCallback(cb.id, "Not one of your sites");
+    const { data: recent } = await sb.from("updates").select("*").eq("person_id", person.id).order("received_at", { ascending: false }).limit(30);
+    const u = ((recent ?? []) as Update[]).find((x) => x.id.startsWith(shortId));
+    if (cb.message) await ch.editButtons(chatId, cb.message.message_id, null);
+    if (!u) return ch.answerCallback(cb.id, "Update not found");
+    if (u.status !== "pending") return ch.answerCallback(cb.id, "The office already reviewed it; call them to move it");
+    await sb.from("people").update({ current_project_id: target.id }).eq("id", person.id);
+    const moved = must(await sb.from("updates").update({ project_id: target.id }).eq("id", u.id).select("*").single(), "move update") as Update;
+    const sorted = await sortUpdate(moved);
+    await ch.answerCallback(cb.id, `Moved to ${target.city}`);
+    return confirm(chatId, sorted, target, mine);
+  }
+
   if (data.startsWith("site:")) {
     const [, shortId, code] = data.split(":");
     const { data: p } = await sb.from("projects").select("*").eq("code", code).maybeSingle();
@@ -277,7 +302,7 @@ async function handleCallback(cb: TgCallback) {
     const filed = must(await sb.from("updates").update({ project_id: project.id, offered_project_ids: null }).eq("id", u.id).select("*").single(), "file update") as Update;
     const sorted = await sortUpdate(filed);
     const all = await candidateProjects(person);
-    return confirm(chatId, sorted, project, all.length > 1);
+    return confirm(chatId, sorted, project, all);
   }
 
   if (data.startsWith("ord:")) {

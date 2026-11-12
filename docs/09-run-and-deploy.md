@@ -19,7 +19,7 @@ npm run dev       # terminal 1
 npm run poll      # terminal 2: forwards bot messages to /api/telegram
 ```
 
-Then on a phone: open the bot, send `/start OM0142` (Om's code, see People), and send a photo with a caption.
+Then on a phone: open the bot, send `/start OM0142` (Supervisor 1's code, see People), and send a photo with a caption.
 
 ### Checks
 

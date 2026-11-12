@@ -87,7 +87,8 @@ export function ProjectEdit({ project: p, people, back, fields = [] }: { project
     </select>
   );
   return (
-    <details className="more">
+    // Opens by itself while the site still has no supervisor or doctor, so assigning is one step.
+    <details className="more" id="edit" open={!p.supervisor_id || !p.doctor_id}>
       <summary>Edit project</summary>
       <form action={updateProjectAction} className="form" style={{ paddingTop: 8 }}>
         <Hidden fields={{ id: p.id, back }} />

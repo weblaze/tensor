@@ -55,13 +55,13 @@ export function seedTables(keep: Row[] = []): Tables {
     current_project_id: null, is_demo: true, created_at: now,
   });
   const people = [
-    person("Abhay", "coordinator", "+91 98100 00001", "ABHAY1"),
-    person("Om", "supervisor", "+91 98100 00002", "OM0142"),
-    person("Rinku", "supervisor", "+91 98100 00003", "RINKU5"),
-    person("Anil", "procurement", "+91 98100 00004", "ANIL01"),
-    person("Prashant", "head", "+91 98100 00005", "HEAD01"),
-    person("Dr. Gunjan", "doctor", "+91 98100 00006", "GUNJAN"),
-    person("Dr. Mehta", "doctor", "+91 98100 00007", "MEHTA1"),
+    person("Office coordinator", "coordinator", "+91 98100 00001", "OFF001"),
+    person("Supervisor 1", "supervisor", "+91 98100 00002", "SUP001"),
+    person("Supervisor 2", "supervisor", "+91 98100 00003", "SUP002"),
+    person("Procurement", "procurement", "+91 98100 00004", "PRO001"),
+    person("Head", "head", "+91 98100 00005", "HEAD01"),
+    person("Doctor (Sonipat)", "doctor", "+91 98100 00006", "DOC001"),
+    person("Doctor (Bhopal)", "doctor", "+91 98100 00007", "DOC002"),
   ];
   const pid = (n: string) => people.find((p) => p.name === n)!.id as string;
 
@@ -71,16 +71,16 @@ export function seedTables(keep: Row[] = []): Tables {
   const template_materials = TEMPLATE_MATERIALS.map(([item, trade, qty, unit, lead_time_days, need_day]) => ({ id: uuid(), template_id: tpl, item, trade, qty, unit, lead_time_days, need_day }));
 
   const project = (code: string, name: string, city: string, start: string, status: string, doctor: string | null, sup: string, notes: string, token?: string): Row => ({
-    id: uuid(), code, name, city, template_id: tpl, doctor_id: doctor ? pid(doctor) : null, supervisor_id: pid(sup), coordinator_id: pid("Abhay"),
+    id: uuid(), code, name, city, template_id: tpl, doctor_id: doctor ? pid(doctor) : null, supervisor_id: pid(sup), coordinator_id: pid("Office coordinator"),
     start_date: start, planned_days: 45, status, order_notes: notes, report_token: token ?? uuid().replace(/-/g, "").slice(0, 24), last_report_sent_on: null, created_at: now,
   });
-  const kaw = project("DM-0131", "Kawardha Fertility Centre", "Kawardha", addDays(d, -90), "closed", null, "Om", "Standard fit-out.");
-  const rkl = project("DM-0136", "Rourkela IVF Centre", "Rourkela", addDays(d, -70), "closed", null, "Rinku", "Standard fit-out.");
-  const gun = project("DM-0142", "Gunjan IVF", "Sonipat", addDays(d, -19), "active", "Dr. Gunjan", "Om", "Ground floor, 2,400 sq ft. Client wants white antimicrobial finish in OT. Two collection rooms.", "demo-gunjan-7f3a9c2e5b");
-  const bho = project("DM-0145", "Bhopal Fertility Clinic", "Bhopal", addDays(d, -6), "active", "Dr. Mehta", "Rinku", "First floor. Existing AC to be removed. Cryostorage room needs extra power point.", "demo-bhopal-4d81e6a0c9");
+  const kaw = project("DM-0131", "Kawardha Fertility Centre", "Kawardha", addDays(d, -90), "closed", null, "Supervisor 1", "Standard fit-out.");
+  const rkl = project("DM-0136", "Rourkela IVF Centre", "Rourkela", addDays(d, -70), "closed", null, "Supervisor 2", "Standard fit-out.");
+  const gun = project("DM-0142", "Sonipat IVF Centre", "Sonipat", addDays(d, -19), "active", "Doctor (Sonipat)", "Supervisor 1", "Ground floor, 2,400 sq ft. Client wants white antimicrobial finish in OT. Two collection rooms.", "demo-gunjan-7f3a9c2e5b");
+  const bho = project("DM-0145", "Bhopal Fertility Clinic", "Bhopal", addDays(d, -6), "active", "Doctor (Bhopal)", "Supervisor 2", "First floor. Existing AC to be removed. Cryostorage room needs extra power point.", "demo-bhopal-4d81e6a0c9");
   const projects = [kaw, rkl, gun, bho];
-  people.find((p) => p.name === "Om")!.current_project_id = gun.id;
-  people.find((p) => p.name === "Rinku")!.current_project_id = bho.id;
+  people.find((p) => p.name === "Supervisor 1")!.current_project_id = gun.id;
+  people.find((p) => p.name === "Supervisor 2")!.current_project_id = bho.id;
 
   const tasks: Row[] = [];
   for (const p of projects) {
@@ -142,29 +142,29 @@ export function seedTables(keep: Row[] = []): Tables {
     });
   };
   const hist: [Row, string, number, string, string, string, string, boolean, string[], string[], number][] = [
-    [gun, "Om", 17, "10:05", "Site survey done, marking complete for OT and lab", "Civil", "general", false, ["doctor"], ["doctor"], 0.92],
-    [gun, "Om", 15, "16:40", "Demolition finished, debris cleared", "Civil", "general", false, ["doctor"], ["doctor"], 0.9],
-    [gun, "Om", 13, "12:15", "Electrical conduits laid in reception and consult", "Electrical", "general", false, ["doctor"], ["doctor"], 0.88],
-    [gun, "Om", 11, "15:30", "MGPS copper piping started in OT", "MGPS", "critical", false, ["doctor"], ["doctor"], 0.91],
-    [gun, "Om", 9, "11:50", "MGPS piping complete, pressure test passed", "MGPS", "critical", false, ["doctor", "head"], ["doctor", "head"], 0.86],
-    [gun, "Om", 7, "17:10", "Ducting installed above OT ceiling", "HVAC", "critical", false, ["doctor"], ["doctor"], 0.9],
-    [gun, "Om", 5, "13:20", "Gypsum boards short by 10 sheets", "Civil", "general", true, ["procurement"], ["procurement", "head"], 0.74],
-    [gun, "Om", 3, "10:45", "OT wall panels delivered to site", "Panelling", "critical", false, ["doctor"], ["doctor"], 0.89],
-    [gun, "Om", 2, "16:05", "OT wall panel fixing started", "Panelling", "critical", false, ["doctor"], ["doctor"], 0.9],
-    [gun, "Om", 1, "18:20", "Embryology lab glass frame marked", "Glazing", "critical", false, ["doctor"], [], 0.62],
-    [bho, "Rinku", 5, "11:00", "Site survey and marking done", "Civil", "general", false, ["doctor"], ["doctor"], 0.92],
-    [bho, "Rinku", 4, "15:45", "Old AC units removed", "Civil", "general", false, ["doctor"], ["doctor"], 0.87],
-    [bho, "Rinku", 3, "12:30", "Demolition 70 percent done", "Civil", "general", false, ["doctor"], ["doctor"], 0.9],
-    [bho, "Rinku", 2, "17:30", "Debris removal complete, conduit work from tomorrow", "Civil", "general", false, ["doctor"], ["doctor"], 0.91],
+    [gun, "Supervisor 1", 17, "10:05", "Site survey done, marking complete for OT and lab", "Civil", "general", false, ["doctor"], ["doctor"], 0.92],
+    [gun, "Supervisor 1", 15, "16:40", "Demolition finished, debris cleared", "Civil", "general", false, ["doctor"], ["doctor"], 0.9],
+    [gun, "Supervisor 1", 13, "12:15", "Electrical conduits laid in reception and consult", "Electrical", "general", false, ["doctor"], ["doctor"], 0.88],
+    [gun, "Supervisor 1", 11, "15:30", "MGPS copper piping started in OT", "MGPS", "critical", false, ["doctor"], ["doctor"], 0.91],
+    [gun, "Supervisor 1", 9, "11:50", "MGPS piping complete, pressure test passed", "MGPS", "critical", false, ["doctor", "head"], ["doctor", "head"], 0.86],
+    [gun, "Supervisor 1", 7, "17:10", "Ducting installed above OT ceiling", "HVAC", "critical", false, ["doctor"], ["doctor"], 0.9],
+    [gun, "Supervisor 1", 5, "13:20", "Gypsum boards short by 10 sheets", "Civil", "general", true, ["procurement"], ["procurement", "head"], 0.74],
+    [gun, "Supervisor 1", 3, "10:45", "OT wall panels delivered to site", "Panelling", "critical", false, ["doctor"], ["doctor"], 0.89],
+    [gun, "Supervisor 1", 2, "16:05", "OT wall panel fixing started", "Panelling", "critical", false, ["doctor"], ["doctor"], 0.9],
+    [gun, "Supervisor 1", 1, "18:20", "Embryology lab glass frame marked", "Glazing", "critical", false, ["doctor"], [], 0.62],
+    [bho, "Supervisor 2", 5, "11:00", "Site survey and marking done", "Civil", "general", false, ["doctor"], ["doctor"], 0.92],
+    [bho, "Supervisor 2", 4, "15:45", "Old AC units removed", "Civil", "general", false, ["doctor"], ["doctor"], 0.87],
+    [bho, "Supervisor 2", 3, "12:30", "Demolition 70 percent done", "Civil", "general", false, ["doctor"], ["doctor"], 0.9],
+    [bho, "Supervisor 2", 2, "17:30", "Debris removal complete, conduit work from tomorrow", "Civil", "general", false, ["doctor"], ["doctor"], 0.91],
   ];
   for (const [p, who, ago, hhmm, note, trade, zone, issue, s, f, c] of hist) upd(p, who, ago, hhmm, note, note, trade, zone, issue, s, f, c);
-  upd(gun, "Om", 0, "11:20", "epoxy base coat ho gaya OT mein, kal second coat", "Epoxy base coat done in OT, second coat tomorrow", "Flooring", "critical", false, ["doctor"], ["doctor"], 0.93);
-  upd(gun, "Om", 0, "13:05", "AHU base frame installed", "AHU base frame installed", "HVAC", "critical", false, ["doctor", "head"], ["doctor", "head"], 0.9);
-  upd(gun, "Om", 0, "15:12", "glass panels received but 2 broken, please reorder", "Glass panels received, 2 broken, please reorder", "Glazing", "critical", true, ["procurement", "head"], null, 0.86,
+  upd(gun, "Supervisor 1", 0, "11:20", "epoxy base coat ho gaya OT mein, kal second coat", "Epoxy base coat done in OT, second coat tomorrow", "Flooring", "critical", false, ["doctor"], ["doctor"], 0.93);
+  upd(gun, "Supervisor 1", 0, "13:05", "AHU base frame installed", "AHU base frame installed", "HVAC", "critical", false, ["doctor", "head"], ["doctor", "head"], 0.9);
+  upd(gun, "Supervisor 1", 0, "15:12", "glass panels received but 2 broken, please reorder", "Glass panels received, 2 broken, please reorder", "Glazing", "critical", true, ["procurement", "head"], null, 0.86,
     { suggested_action: { type: "material_status", material_id: glass.id, status: "issue", note: "2 broken, reorder" } });
-  upd(gun, "Om", 0, "16:48", "phase 1 complete", "Phase 1 complete", "Coordination", "general", false, ["doctor", "head"], null, 0.72,
+  upd(gun, "Supervisor 1", 0, "16:48", "phase 1 complete", "Phase 1 complete", "Coordination", "general", false, ["doctor", "head"], null, 0.72,
     { kind: "text", suggested_action: { type: "phase_done", phase: "Services" } });
-  upd(gun, "Om", 0, "17:31", "aaj labour kam hai, 3 aadmi nahi aaye", "Labour short today, 3 men absent", "Civil", "general", true, ["head"], null, 0.9,
+  upd(gun, "Supervisor 1", 0, "17:31", "aaj labour kam hai, 3 aadmi nahi aaye", "Labour short today, 3 men absent", "Civil", "general", true, ["head"], null, 0.9,
     { kind: "voice", transcript: "aaj labour kam hai, 3 aadmi nahi aaye" });
   // Same as migration reseed_times: pull today's future-dated updates back to just before now.
   const nowMs = Date.now();

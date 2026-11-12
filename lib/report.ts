@@ -98,9 +98,10 @@ export async function getReport(token: string, dateParam?: string | null): Promi
   };
 }
 
-export function reportUrl(project: Pick<Project, "report_token">, date?: string): string {
+/** The doctor's one link: it never changes and always opens on today; earlier days are a tap away inside. */
+export function reportUrl(project: Pick<Project, "report_token">): string {
   const base = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
-  return `${base}/r/${project.report_token}${date ? `?date=${date}` : ""}`;
+  return `${base}/r/${project.report_token}`;
 }
 
 /** Send tonight's report link to the doctor (Telegram if linked, otherwise logged for the coordinator to copy). */
@@ -113,7 +114,7 @@ export async function sendReport(projectId: string, opts: { force?: boolean } = 
     .eq("status", "approved").contains("final_routes", ["doctor"])
     .gte("received_at", `${date}T00:00:00+05:30`).lte("received_at", `${date}T23:59:59.999+05:30`);
   const n = count ?? 0;
-  const url = reportUrl(project, date);
+  const url = reportUrl(project);
   if (!opts.force && (n === 0 || project.last_report_sent_on === date)) {
     return { status: n === 0 ? "nothing_today" : "already_sent", count: n, url };
   }
